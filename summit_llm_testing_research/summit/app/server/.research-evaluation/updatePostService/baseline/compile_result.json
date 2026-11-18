@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "target": "updatePostService",
+  "arm": "baseline",
+  "source_file": "src/posts/posts.service.ts",
+  "virtual_test_file": "src/posts/__research_updatePostService_baseline.test.ts",
+  "archived_test_file": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\posts\\updatePostService\\baseline\\generated.test.ts",
+  "compiled_test_js": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\.research-evaluation\\updatePostService\\baseline\\dist\\posts\\__research_updatePostService_baseline.test.js",
+  "typecheck_errors": 0,
+  "typescript_version": "6.0.2",
+  "excluded_preexisting_test_files": 3,
+  "original_test_modified": false
+}

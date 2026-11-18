@@ -1,0 +1,77 @@
+TAP version 13
+# (node:16692) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:16692) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# (node:16692) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+# Subtest: loginService normalizes email, preserves password whitespace, and returns the mapped user and token
+ok 1 - loginService normalizes email, preserves password whitespace, and returns the mapped user and token
+  ---
+  duration_ms: 5.1959
+  type: 'test'
+  ...
+# Subtest: loginService rejects an unknown email without verifying a password or creating a response
+ok 2 - loginService rejects an unknown email without verifying a password or creating a response
+  ---
+  duration_ms: 1.0221
+  type: 'test'
+  ...
+# Subtest: loginService verifies an empty password and rejects it before checking email verification
+ok 3 - loginService verifies an empty password and rejects it before checking email verification
+  ---
+  duration_ms: 0.3522
+  type: 'test'
+  ...
+# Subtest: loginService rejects an unverified email after successful password verification
+ok 4 - loginService rejects an unverified email after successful password verification
+  ---
+  duration_ms: 0.2853
+  type: 'test'
+  ...
+# Subtest: loginService propagates a repository rejection without invoking downstream dependencies
+ok 5 - loginService propagates a repository rejection without invoking downstream dependencies
+  ---
+  duration_ms: 0.3916
+  type: 'test'
+  ...
+# Subtest: loginService propagates a password verifier rejection without mapping the user or creating a token
+ok 6 - loginService propagates a password verifier rejection without mapping the user or creating a token
+  ---
+  duration_ms: 0.3703
+  type: 'test'
+  ...
+# Subtest: loginService propagates a mapper error and does not create a token
+ok 7 - loginService propagates a mapper error and does not create a token
+  ---
+  duration_ms: 0.3154
+  type: 'test'
+  ...
+# Subtest: loginService propagates a token creation error after mapping the authenticated user
+ok 8 - loginService propagates a token creation error after mapping the authenticated user
+  ---
+  duration_ms: 0.3424
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 275.5883
+# start of coverage report
+# --------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# --------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  auth              |        |          |         | 
+#   auth.services.ts |  43.43 |   100.00 |   20.00 | 71-82 85-117 120-147 150-175
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+# --------------------------------------------------------------------------------
+# all files          |  54.91 |   100.00 |   55.56 | 
+# --------------------------------------------------------------------------------
+# end of coverage report

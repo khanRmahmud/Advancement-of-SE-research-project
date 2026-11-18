@@ -1,0 +1,76 @@
+TAP version 13
+# (node:12312) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:12312) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: updateCommentService updates an owned comment and maps the repository result
+ok 1 - updateCommentService updates an owned comment and maps the repository result
+  ---
+  duration_ms: 18.7239
+  type: 'test'
+  ...
+# Subtest: updateCommentService forwards an empty body without service-level validation
+ok 2 - updateCommentService forwards an empty body without service-level validation
+  ---
+  duration_ms: 2.6242
+  type: 'test'
+  ...
+# Subtest: updateCommentService rejects a missing comment without updating or mapping
+ok 3 - updateCommentService rejects a missing comment without updating or mapping
+  ---
+  duration_ms: 5.3303
+  type: 'test'
+  ...
+# Subtest: updateCommentService rejects a comment owned by another user
+ok 4 - updateCommentService rejects a comment owned by another user
+  ---
+  duration_ms: 1.4798
+  type: 'test'
+  ...
+# Subtest: updateCommentService rejects an owned comment that has been deleted
+ok 5 - updateCommentService rejects an owned comment that has been deleted
+  ---
+  duration_ms: 2.7349
+  type: 'test'
+  ...
+# Subtest: updateCommentService checks ownership before reporting deletion
+ok 6 - updateCommentService checks ownership before reporting deletion
+  ---
+  duration_ms: 1.6491
+  type: 'test'
+  ...
+# Subtest: updateCommentService propagates lookup failures without attempting an update
+ok 7 - updateCommentService propagates lookup failures without attempting an update
+  ---
+  duration_ms: 1.9203
+  type: 'test'
+  ...
+# Subtest: updateCommentService propagates update failures without mapping a result
+ok 8 - updateCommentService propagates update failures without mapping a result
+  ---
+  duration_ms: 1.936
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 892.7122
+# start of coverage report
+# ----------------------------------------------------------------------------------------------------------
+# file                   | line % | branch % | funcs % | uncovered lines
+# ----------------------------------------------------------------------------------------------------------
+# src                    |        |          |         | 
+#  comments              |        |          |         | 
+#   comments.services.ts |  47.51 |   100.00 |   30.00 | 27-37 76-91 94-109 112-124 127-134 137-143 158-181
+#  errors                |        |          |         | 
+#   app.error.ts         | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts        |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts       |  92.86 |   100.00 |  100.00 | 14
+# ----------------------------------------------------------------------------------------------------------
+# all files              |  57.83 |   100.00 |   50.00 | 
+# ----------------------------------------------------------------------------------------------------------
+# end of coverage report

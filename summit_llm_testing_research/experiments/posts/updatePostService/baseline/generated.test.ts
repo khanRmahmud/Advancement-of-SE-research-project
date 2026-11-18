@@ -1,0 +1,249 @@
+import test, { mock } from 'node:test';
+import assert from 'node:assert/strict';
+import type { UpdatePostRequest } from '@summit/shared';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+const existingPost = {
+  id: 42,
+  authorId: 7,
+  title: 'Original title',
+  body: 'Original body',
+};
+
+const updatedPost = {
+  ...existingPost,
+  title: 'Updated title',
+};
+
+const mappedPost = {
+  id: 42,
+  title: 'Updated title',
+  body: 'Original body',
+};
+
+const getByIdPost = mock.fn(
+  async (_postId: number): Promise<typeof existingPost | undefined> => existingPost,
+);
+const getCommunityById = mock.fn(
+  async (communityId: number): Promise<{ id: number } | undefined> => ({
+    id: communityId,
+  }),
+);
+const updatePost = mock.fn(
+  async (
+    _postId: number,
+    _data: UpdatePostRequest,
+  ): Promise<typeof updatedPost> => updatedPost,
+);
+const toPostContract = mock.fn((_post: unknown) => mappedPost);
+
+function unexpectedRepositoryCall(): never {
+  throw new Error('Unexpected call to an unrelated repository function');
+}
+
+mock.module('./posts.repositories.js', {
+  namedExports: {
+    createPost: unexpectedRepositoryCall,
+    getAllPosts: unexpectedRepositoryCall,
+    getByIdPost,
+    getCommunityById,
+    getPostVote: unexpectedRepositoryCall,
+    removePost: unexpectedRepositoryCall,
+    setPostVote: unexpectedRepositoryCall,
+    updatePost,
+  },
+});
+
+mock.module('./posts.mapper.js', {
+  namedExports: { toPostContract },
+});
+
+const { updatePostService } = await import('./posts.service.js');
+
+function resetDependencies(): void {
+  getByIdPost.mock.resetCalls();
+  getCommunityById.mock.resetCalls();
+  updatePost.mock.resetCalls();
+  toPostContract.mock.resetCalls();
+
+  getByIdPost.mock.mockImplementation(async () => existingPost);
+  getCommunityById.mock.mockImplementation(async (id) => ({ id }));
+  updatePost.mock.mockImplementation(async () => updatedPost);
+  toPostContract.mock.mockImplementation(() => mappedPost);
+}
+
+function assertNoWriteOrMapping(): void {
+  assert.equal(updatePost.mock.callCount(), 0);
+  assert.equal(toPostContract.mock.callCount(), 0);
+}
+
+test('updates an owned post without looking up an omitted community and returns the mapped result', async () => {
+  resetDependencies();
+  const data: UpdatePostRequest = { title: 'Updated title' };
+
+  const result = await updatePostService(42, 7, data);
+
+  assert.deepEqual(result, { post: mappedPost });
+  assert.strictEqual(result.post, mappedPost);
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.deepEqual(getByIdPost.mock.calls[0]!.arguments, [42]);
+  assert.equal(getCommunityById.mock.callCount(), 0);
+  assert.equal(updatePost.mock.callCount(), 1);
+  assert.deepEqual(updatePost.mock.calls[0]!.arguments, [42, data]);
+  assert.strictEqual(updatePost.mock.calls[0]!.arguments[1], data);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.strictEqual(toPostContract.mock.calls[0]!.arguments[0], updatedPost);
+});
+
+test('validates a supplied community ID even when it is zero before updating', async () => {
+  resetDependencies();
+  const data: UpdatePostRequest = { communityId: 0 };
+  const operations: string[] = [];
+
+  getByIdPost.mock.mockImplementation(async () => {
+    operations.push('post');
+    return existingPost;
+  });
+  getCommunityById.mock.mockImplementation(async (id) => {
+    operations.push('community');
+    return { id };
+  });
+  updatePost.mock.mockImplementation(async () => {
+    operations.push('update');
+    return updatedPost;
+  });
+  toPostContract.mock.mockImplementation(() => {
+    operations.push('map');
+    return mappedPost;
+  });
+
+  const result = await updatePostService(42, 7, data);
+
+  assert.deepEqual(operations, ['post', 'community', 'update', 'map']);
+  assert.equal(getCommunityById.mock.callCount(), 1);
+  assert.deepEqual(getCommunityById.mock.calls[0]!.arguments, [0]);
+  assert.equal(updatePost.mock.callCount(), 1);
+  assert.strictEqual(updatePost.mock.calls[0]!.arguments[1], data);
+  assert.strictEqual(result.post, mappedPost);
+});
+
+test('rejects a missing post without validating the community or writing', async () => {
+  resetDependencies();
+  getByIdPost.mock.mockImplementation(async () => undefined);
+
+  await assert.rejects(
+    updatePostService(999, 7, { communityId: 12 }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    ),
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.deepEqual(getByIdPost.mock.calls[0]!.arguments, [999]);
+  assert.equal(getCommunityById.mock.callCount(), 0);
+  assertNoWriteOrMapping();
+});
+
+test('rejects edits by another user before validating the requested community', async () => {
+  resetDependencies();
+
+  await assert.rejects(
+    updatePostService(42, 8, { title: 'Unauthorized', communityId: 12 }),
+    new AppError(
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
+      "You cannot edit another user's post.",
+    ),
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.deepEqual(getByIdPost.mock.calls[0]!.arguments, [42]);
+  assert.equal(getCommunityById.mock.callCount(), 0);
+  assertNoWriteOrMapping();
+});
+
+test('rejects a nonexistent requested community without updating the post', async () => {
+  resetDependencies();
+  getCommunityById.mock.mockImplementation(async () => undefined);
+
+  await assert.rejects(
+    updatePostService(42, 7, { communityId: 123 }),
+    new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.'),
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.equal(getCommunityById.mock.callCount(), 1);
+  assert.deepEqual(getCommunityById.mock.calls[0]!.arguments, [123]);
+  assertNoWriteOrMapping();
+});
+
+test('propagates a post lookup failure without attempting subsequent operations', async () => {
+  resetDependencies();
+  const failure = new Error('Post lookup failed');
+  getByIdPost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updatePostService(42, 7, { communityId: 12 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.deepEqual(getByIdPost.mock.calls[0]!.arguments, [42]);
+  assert.equal(getCommunityById.mock.callCount(), 0);
+  assertNoWriteOrMapping();
+});
+
+test('propagates a community lookup failure without writing or mapping', async () => {
+  resetDependencies();
+  const failure = new Error('Community lookup failed');
+  getCommunityById.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updatePostService(42, 7, { communityId: 12 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.equal(getCommunityById.mock.callCount(), 1);
+  assert.deepEqual(getCommunityById.mock.calls[0]!.arguments, [12]);
+  assertNoWriteOrMapping();
+});
+
+test('propagates an update failure without mapping a result', async () => {
+  resetDependencies();
+  const failure = new Error('Update failed');
+  const data: UpdatePostRequest = { body: 'Revised body', communityId: 12 };
+  updatePost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updatePostService(42, 7, data),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.equal(getCommunityById.mock.callCount(), 1);
+  assert.deepEqual(getCommunityById.mock.calls[0]!.arguments, [12]);
+  assert.equal(updatePost.mock.callCount(), 1);
+  assert.deepEqual(updatePost.mock.calls[0]!.arguments, [42, data]);
+  assert.strictEqual(updatePost.mock.calls[0]!.arguments[1], data);
+  assert.equal(toPostContract.mock.callCount(), 0);
+});

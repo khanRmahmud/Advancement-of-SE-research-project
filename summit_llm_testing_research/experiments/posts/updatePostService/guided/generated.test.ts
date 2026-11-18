@@ -1,0 +1,253 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+import type {
+  DatabasePost,
+  toPostContract as MapPost,
+} from './posts.mapper.js';
+
+type UpdateRequest = Parameters<
+  typeof import('./posts.service.js').updatePostService
+>[2];
+
+const postId = 41;
+const ownerId = 7;
+
+const existingPost = {
+  id: postId,
+  authorId: ownerId,
+  title: 'Original title',
+  body: 'Original body',
+  communityId: 3,
+} as unknown as DatabasePost;
+
+const updatedPost = {
+  ...existingPost,
+  title: 'Edited title',
+  body: 'Edited body',
+} as DatabasePost;
+
+const mappedPost = {
+  id: postId,
+  title: 'Edited title',
+  body: 'Edited body',
+} as unknown as ReturnType<typeof MapPost>;
+
+const lookupPost = mock.fn(
+  async (_id: number): Promise<DatabasePost | undefined> => existingPost,
+);
+const lookupCommunity = mock.fn(
+  async (_id: number): Promise<{ id: number } | undefined> => ({ id: 3 }),
+);
+const persistPost = mock.fn(
+  async (_id: number, _data: UpdateRequest): Promise<DatabasePost> =>
+    updatedPost,
+);
+const mapPost = mock.fn(
+  (_post: DatabasePost): ReturnType<typeof MapPost> => mappedPost,
+);
+
+function unexpectedRepositoryCall(): never {
+  throw new Error('An unrelated repository operation was called.');
+}
+
+mock.module('./posts.repositories.js', {
+  namedExports: {
+    createPost: unexpectedRepositoryCall,
+    getAllPosts: unexpectedRepositoryCall,
+    getByIdPost: lookupPost,
+    getCommunityById: lookupCommunity,
+    getPostVote: unexpectedRepositoryCall,
+    removePost: unexpectedRepositoryCall,
+    setPostVote: unexpectedRepositoryCall,
+    updatePost: persistPost,
+  },
+});
+
+mock.module('./posts.mapper.js', {
+  namedExports: {
+    toPostContract: mapPost,
+  },
+});
+
+const { updatePostService } = await import('./posts.service.js');
+
+beforeEach(() => {
+  lookupPost.mock.resetCalls();
+  lookupCommunity.mock.resetCalls();
+  persistPost.mock.resetCalls();
+  mapPost.mock.resetCalls();
+
+  lookupPost.mock.mockImplementation(async () => existingPost);
+  lookupCommunity.mock.mockImplementation(async () => ({ id: 3 }));
+  persistPost.mock.mockImplementation(async () => updatedPost);
+  mapPost.mock.mockImplementation(() => mappedPost);
+});
+
+function assertNoPersistenceOrMapping(): void {
+  assert.equal(persistPost.mock.callCount(), 0);
+  assert.equal(mapPost.mock.callCount(), 0);
+}
+
+test('an owner can save title and body changes and receive the mapped updated post', async () => {
+  const data: UpdateRequest = {
+    title: 'Edited title',
+    body: 'Edited body',
+  };
+
+  const result = await updatePostService(postId, ownerId, data);
+
+  assert.deepEqual(result, { post: mappedPost });
+  assert.strictEqual(result.post, mappedPost);
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.deepEqual(lookupPost.mock.calls[0]!.arguments, [postId]);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assert.equal(persistPost.mock.callCount(), 1);
+  assert.deepEqual(persistPost.mock.calls[0]!.arguments, [postId, data]);
+  assert.strictEqual(persistPost.mock.calls[0]!.arguments[1], data);
+  assert.equal(mapPost.mock.callCount(), 1);
+  assert.strictEqual(mapPost.mock.calls[0]!.arguments[0], updatedPost);
+});
+
+test('an empty update is passed through without checking a community', async () => {
+  const data: UpdateRequest = {};
+  persistPost.mock.mockImplementation(async () => existingPost);
+
+  const result = await updatePostService(postId, ownerId, data);
+
+  assert.deepEqual(result, { post: mappedPost });
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assert.equal(persistPost.mock.callCount(), 1);
+  assert.strictEqual(persistPost.mock.calls[0]!.arguments[1], data);
+  assert.deepEqual(data, {});
+  assert.equal(mapPost.mock.callCount(), 1);
+  assert.strictEqual(mapPost.mock.calls[0]!.arguments[0], existingPost);
+});
+
+test('a defined community ID of zero is validated before persisting', async () => {
+  const data: UpdateRequest = { communityId: 0 };
+  const operations: string[] = [];
+
+  lookupPost.mock.mockImplementation(async () => {
+    operations.push('post');
+    return existingPost;
+  });
+  lookupCommunity.mock.mockImplementation(async () => {
+    operations.push('community');
+    return { id: 0 };
+  });
+  persistPost.mock.mockImplementation(async () => {
+    operations.push('update');
+    return updatedPost;
+  });
+  mapPost.mock.mockImplementation(() => {
+    operations.push('map');
+    return mappedPost;
+  });
+
+  const result = await updatePostService(postId, ownerId, data);
+
+  assert.deepEqual(result, { post: mappedPost });
+  assert.deepEqual(operations, ['post', 'community', 'update', 'map']);
+  assert.equal(lookupCommunity.mock.callCount(), 1);
+  assert.deepEqual(lookupCommunity.mock.calls[0]!.arguments, [0]);
+  assert.equal(persistPost.mock.callCount(), 1);
+  assert.deepEqual(persistPost.mock.calls[0]!.arguments, [postId, data]);
+});
+
+test('a missing post rejects with POST_NOT_FOUND before any community lookup or update', async () => {
+  lookupPost.mock.mockImplementation(async () => undefined);
+
+  await assert.rejects(
+    updatePostService(postId, ownerId, { communityId: 9 }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    ),
+  );
+
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.deepEqual(lookupPost.mock.calls[0]!.arguments, [postId]);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assertNoPersistenceOrMapping();
+});
+
+test('a non-owner cannot edit a post even when requesting a community change', async () => {
+  await assert.rejects(
+    updatePostService(postId, ownerId + 1, {
+      title: 'Unauthorized edit',
+      communityId: 9,
+    }),
+    new AppError(
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
+      "You cannot edit another user's post.",
+    ),
+  );
+
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.deepEqual(lookupPost.mock.calls[0]!.arguments, [postId]);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assertNoPersistenceOrMapping();
+});
+
+test('a nonexistent destination community prevents saving an owner edit', async () => {
+  lookupCommunity.mock.mockImplementation(async () => undefined);
+  const data: UpdateRequest = { communityId: 99 };
+
+  await assert.rejects(
+    updatePostService(postId, ownerId, data),
+    new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.'),
+  );
+
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.equal(lookupCommunity.mock.callCount(), 1);
+  assert.deepEqual(lookupCommunity.mock.calls[0]!.arguments, [99]);
+  assertNoPersistenceOrMapping();
+});
+
+test('a post lookup failure is propagated unchanged without attempting an update', async () => {
+  const failure = new Error('Post lookup failed');
+  lookupPost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updatePostService(postId, ownerId, { communityId: 9 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.deepEqual(lookupPost.mock.calls[0]!.arguments, [postId]);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assertNoPersistenceOrMapping();
+});
+
+test('a persistence failure is propagated unchanged and no response mapping occurs', async () => {
+  const failure = new Error('Saving the post failed');
+  const data: UpdateRequest = { title: 'Unsaved title' };
+  persistPost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updatePostService(postId, ownerId, data),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(lookupPost.mock.callCount(), 1);
+  assert.equal(lookupCommunity.mock.callCount(), 0);
+  assert.equal(persistPost.mock.callCount(), 1);
+  assert.deepEqual(persistPost.mock.calls[0]!.arguments, [postId, data]);
+  assert.equal(mapPost.mock.callCount(), 0);
+});

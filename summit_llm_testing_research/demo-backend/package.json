@@ -1,0 +1,10 @@
+{
+  "name": "summit-llm-mutation-demo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:smoke": "jest --config jest.smoke.config.cjs --runInBand",
+    "test:study": "jest --config jest.study.config.cjs --runInBand --coverage",
+    "mutate:study": "stryker run stryker.config.mjs"
+  }
+}

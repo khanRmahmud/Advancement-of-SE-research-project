@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "comments",
+  "target_function": "voteCommentService",
+  "source_file": "src/comments/comments.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "COMMENT-VOTE-01",
+      "text": "Users can vote on comments or replies.",
+      "evidence": "Product Backlog: users can vote on posts and replies; earlier user stories support discussion interactions."
+    }
+  ],
+  "evaluation_notes": [
+    "Backend service exists and the backlog documents reply voting; availability of a frontend voting control is unverified.",
+    "Do not invent vote-toggle semantics, HTTP status codes, or treatment of deleted comments as independent source requirements."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "protocol": "main-study-evaluation-v1",
+  "feature": "comments",
+  "target": "updateCommentService",
+  "method": "baseline",
+  "generated_test_sha256": "d5b8fcfed1577ad414d7d60963d7026299df3555d7f4e5bcf36e625a760879d5",
+  "source_sha256": "99656e99a91198a9b368328355b0a5e83d5332f0726651cb33cde051e91f7a58",
+  "started_utc": "2026-11-14T22:48:00.563196+00:00",
+  "compilation": "passed",
+  "execution": "passed",
+  "node_exit_code": 0,
+  "tests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "coverage": {
+    "status": "module_level_only",
+    "covered_file": "src\\comments\\comments.services.ts",
+    "lh": 86,
+    "lf": 181,
+    "brh": 14,
+    "brf": 14,
+    "line_percent": 47.51,
+    "branch_percent": 100.0
+  },
+  "mutations": "not_run_in_this_step",
+  "original_test_edited": false,
+  "updated_utc": "2026-11-14T22:48:08.892569+00:00"
+}

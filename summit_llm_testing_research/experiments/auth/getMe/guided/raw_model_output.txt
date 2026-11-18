@@ -1,0 +1,251 @@
+import test, { mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+
+const unexpectedCall = (..._args: unknown[]): never => {
+  throw new Error('Unexpected dependency call');
+};
+
+const findByIdMock = mock.fn(
+  async (_id: number): Promise<unknown> => unexpectedCall(),
+);
+const toUserContractMock = mock.fn(
+  (_user: unknown): unknown => unexpectedCall(),
+);
+
+mock.module('./auth.repositories.js', {
+  namedExports: {
+    findById: findByIdMock,
+    findByEmail: unexpectedCall,
+    findByUsername: unexpectedCall,
+    createUnverifiedUser: unexpectedCall,
+    consumePasswordResetCode: unexpectedCall,
+    savePasswordResetCode: unexpectedCall,
+  },
+});
+
+mock.module('./auth.mappers.js', {
+  namedExports: { toUserContract: toUserContractMock },
+});
+
+mock.module('./auth.token.js', {
+  namedExports: { createToken: unexpectedCall },
+});
+
+mock.module('./verification/verification.code.js', {
+  namedExports: { createVerificationCode: unexpectedCall },
+});
+
+mock.module('./verification/verification.console.js', {
+  namedExports: { sendVerificationCode: unexpectedCall },
+});
+
+mock.module('./password-reset/password-reset.code.js', {
+  namedExports: {
+    createPasswordResetCode: unexpectedCall,
+    hashPasswordResetCode: unexpectedCall,
+  },
+});
+
+mock.module('./password-reset/password-reset.console.js', {
+  namedExports: { sendPasswordResetCode: unexpectedCall },
+});
+
+mock.module('argon2', {
+  defaultExport: {
+    hash: unexpectedCall,
+    verify: unexpectedCall,
+  },
+});
+
+const { getMe } = await import('./auth.services.js');
+
+function configure(
+  lookup: (id: number) => Promise<unknown>,
+  map: (user: unknown) => unknown = unexpectedCall,
+): void {
+  findByIdMock.mock.resetCalls();
+  toUserContractMock.mock.resetCalls();
+  findByIdMock.mock.mockImplementation(lookup);
+  toUserContractMock.mock.mockImplementation(map);
+}
+
+function account(id: number, emailVerified = true) {
+  return {
+    id,
+    email: `user${id}@example.com`,
+    username: `user${id}`,
+    passwordHash: 'private-password-hash',
+    emailVerified,
+  };
+}
+
+test('getMe returns the mapped account in a user-only response envelope', { concurrency: false }, async () => {
+  const row = account(42);
+  const contract = {
+    id: 42,
+    email: row.email,
+    username: row.username,
+  };
+  configure(async () => row, () => contract);
+
+  const result = await getMe(42);
+
+  assert.deepEqual(result, { user: contract });
+  assert.strictEqual(result.user, contract);
+  assert.deepEqual(Object.keys(result), ['user']);
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [42]);
+  assert.equal(toUserContractMock.mock.callCount(), 1);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], row);
+});
+
+test('getMe does not reject an existing account merely because its email is unverified', { concurrency: false }, async () => {
+  const row = account(17, false);
+  const contract = {
+    id: row.id,
+    email: row.email,
+    username: row.username,
+  };
+  configure(async () => row, () => contract);
+
+  const result = await getMe(17);
+
+  assert.deepEqual(result, { user: contract });
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [17]);
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.equal(toUserContractMock.mock.callCount(), 1);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], row);
+});
+
+test('getMe reports USER_NOT_FOUND when the repository finds no account', { concurrency: false }, async () => {
+  configure(async () => null);
+
+  await assert.rejects(
+    getMe(404),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.USER_NOT_FOUND,
+      'User not found.',
+    ),
+  );
+
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [404]);
+  assert.equal(toUserContractMock.mock.callCount(), 0);
+});
+
+test('getMe forwards a zero identifier to the repository without substituting another identifier', { concurrency: false }, async () => {
+  const row = account(0);
+  const contract = { id: 0, email: row.email, username: row.username };
+  configure(async () => row, () => contract);
+
+  const result = await getMe(0);
+
+  assert.deepEqual(result, { user: contract });
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [0]);
+  assert.equal(toUserContractMock.mock.callCount(), 1);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], row);
+});
+
+test('getMe propagates a repository rejection without mapping or wrapping it', { concurrency: false }, async () => {
+  const failure = new Error('Account lookup failed');
+  configure(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(getMe(23), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [23]);
+  assert.equal(toUserContractMock.mock.callCount(), 0);
+});
+
+test('getMe propagates a mapper error after a successful lookup', { concurrency: false }, async () => {
+  const row = account(31);
+  const failure = new Error('Account mapping failed');
+  configure(async () => row, () => {
+    throw failure;
+  });
+
+  await assert.rejects(getMe(31), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.equal(findByIdMock.mock.callCount(), 1);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [31]);
+  assert.equal(toUserContractMock.mock.callCount(), 1);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], row);
+});
+
+test('getMe waits for the repository result before invoking the mapper', { concurrency: false }, async () => {
+  const row = account(52);
+  const contract = { id: row.id, email: row.email, username: row.username };
+  let resolveLookup!: (value: unknown) => void;
+  const pendingLookup = new Promise<unknown>((resolve) => {
+    resolveLookup = resolve;
+  });
+  configure(() => pendingLookup, () => contract);
+
+  const response = getMe(52);
+  await Promise.resolve();
+
+  const lookupCallsBeforeResolution = findByIdMock.mock.callCount();
+  const mapperCallsBeforeResolution = toUserContractMock.mock.callCount();
+
+  resolveLookup(row);
+  const result = await response;
+
+  assert.equal(lookupCallsBeforeResolution, 1);
+  assert.equal(mapperCallsBeforeResolution, 0);
+  assert.deepEqual(findByIdMock.mock.calls[0]!.arguments, [52]);
+  assert.equal(toUserContractMock.mock.callCount(), 1);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], row);
+  assert.deepEqual(result, { user: contract });
+});
+
+test('getMe performs a fresh lookup and mapping on repeated requests for the same account', { concurrency: false }, async () => {
+  const firstRow = account(64);
+  const updatedRow = { ...firstRow, username: 'updated-name' };
+  const firstContract = {
+    id: firstRow.id,
+    email: firstRow.email,
+    username: firstRow.username,
+  };
+  const updatedContract = {
+    id: updatedRow.id,
+    email: updatedRow.email,
+    username: updatedRow.username,
+  };
+  let lookupCount = 0;
+  configure(
+    async () => (++lookupCount === 1 ? firstRow : updatedRow),
+    (row) => {
+      if (row === firstRow) return firstContract;
+      assert.strictEqual(row, updatedRow);
+      return updatedContract;
+    },
+  );
+
+  const firstResult = await getMe(64);
+  const secondResult = await getMe(64);
+
+  assert.deepEqual(firstResult, { user: firstContract });
+  assert.deepEqual(secondResult, { user: updatedContract });
+  assert.notStrictEqual(firstResult, secondResult);
+  assert.equal(findByIdMock.mock.callCount(), 2);
+  assert.deepEqual(
+    findByIdMock.mock.calls.map((call) => call.arguments),
+    [[64], [64]],
+  );
+  assert.equal(toUserContractMock.mock.callCount(), 2);
+  assert.strictEqual(toUserContractMock.mock.calls[0]!.arguments[0], firstRow);
+  assert.strictEqual(toUserContractMock.mock.calls[1]!.arguments[0], updatedRow);
+});

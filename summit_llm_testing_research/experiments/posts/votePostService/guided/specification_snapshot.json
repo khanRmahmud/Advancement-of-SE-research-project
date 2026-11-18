@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "posts",
+  "target_function": "votePostService",
+  "source_file": "src/posts/posts.service.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "POST-VOTE-01",
+      "text": "Users can vote on posts.",
+      "evidence": "Sprint 1 user story: add vote button and implement vote storage; Product Backlog: vote on posts."
+    },
+    {
+      "id": "POST-VOTE-02",
+      "text": "A post vote is reflected in the recorded voting state or count.",
+      "evidence": "Sprint 1 user story: implement vote count storage and updates."
+    }
+  ],
+  "evaluation_notes": []
+}

@@ -1,0 +1,76 @@
+TAP version 13
+# (node:5300) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:5300) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: creates a post with its content, selected community, author, and photo metadata
+ok 1 - creates a post with its content, selected community, author, and photo metadata
+  ---
+  duration_ms: 2.775
+  type: 'test'
+  ...
+# Subtest: supports a text-only post when all optional photo fields are omitted
+ok 2 - supports a text-only post when all optional photo fields are omitted
+  ---
+  duration_ms: 0.8999
+  type: 'test'
+  ...
+# Subtest: passes anonymous publication to persistence while retaining the creating user ID
+ok 3 - passes anonymous publication to persistence while retaining the creating user ID
+  ---
+  duration_ms: 0.776
+  type: 'test'
+  ...
+# Subtest: waits for community lookup to succeed before creating or mapping a post
+ok 4 - waits for community lookup to succeed before creating or mapping a post
+  ---
+  duration_ms: 0.7095
+  type: 'test'
+  ...
+# Subtest: rejects a missing community with the specified not-found error without creating a post
+ok 5 - rejects a missing community with the specified not-found error without creating a post
+  ---
+  duration_ms: 2.4995
+  type: 'test'
+  ...
+# Subtest: propagates a community lookup failure without attempting persistence or mapping
+ok 6 - propagates a community lookup failure without attempting persistence or mapping
+  ---
+  duration_ms: 1.0272
+  type: 'test'
+  ...
+# Subtest: propagates a persistence failure without mapping a nonexistent result
+ok 7 - propagates a persistence failure without mapping a nonexistent result
+  ---
+  duration_ms: 0.916
+  type: 'test'
+  ...
+# Subtest: propagates a contract-mapping failure after creating the post exactly once
+ok 8 - propagates a contract-mapping failure after creating the post exactly once
+  ---
+  duration_ms: 0.8231
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.0038
+# start of coverage report
+# --------------------------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# --------------------------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+#  posts             |        |          |         | 
+#   posts.service.ts |  43.71 |   100.00 |   12.50 | 26-37 69-73 76-82 85-94 97-110 113-134 137-151
+# --------------------------------------------------------------------------------------------------
+# all files          |  56.50 |   100.00 |   41.67 | 
+# --------------------------------------------------------------------------------------------------
+# end of coverage report

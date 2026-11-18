@@ -1,0 +1,4 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+communities,joinCommunityService,src/communities/communities.services.ts,0,BlockStatement,136,41,145,2,{},Killed,Killed
+communities,joinCommunityService,src/communities/communities.services.ts,1,ObjectLiteral,141,10,144,4,{},Killed,Killed
+communities,joinCommunityService,src/communities/communities.services.ts,2,BooleanLiteral,143,13,143,17,false,Killed,Killed

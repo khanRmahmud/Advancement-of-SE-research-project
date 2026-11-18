@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "communities",
+  "target_function": "joinCommunityService",
+  "source_file": "src/communities/communities.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "COMMUNITY-JOIN-01",
+      "text": "A user can join a community.",
+      "evidence": "Sprint 2 user story: discover and join communities; Join Community backend connection."
+    },
+    {
+      "id": "COMMUNITY-JOIN-02",
+      "text": "The joined/not-joined membership status should be reflected to the user.",
+      "evidence": "Sprint 2 user story: create joined/not-joined status for communities."
+    }
+  ],
+  "evaluation_notes": []
+}

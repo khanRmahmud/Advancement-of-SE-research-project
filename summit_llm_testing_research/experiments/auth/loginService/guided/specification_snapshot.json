@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "auth",
+  "target_function": "loginService",
+  "source_file": "src/auth/auth.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "AUTH-LOGIN-01",
+      "text": "A registered user can log in using their email and password.",
+      "evidence": "Sprint 1 user story: account creation and login; Product Backlog: Create an account and log in."
+    },
+    {
+      "id": "AUTH-LOGIN-02",
+      "text": "A user must complete the account verification-code step before they can log in.",
+      "evidence": "Sprint 1 user story: verify email after registration; current user clarification: verification code entered manually after retrieval from server logs."
+    },
+    {
+      "id": "AUTH-LOGIN-03",
+      "text": "A successful login establishes an authenticated session.",
+      "evidence": "Product Backlog: authentication with a login session; Sprint 1 user stories: persist authentication token during app session."
+    }
+  ],
+  "evaluation_notes": [
+    "Email verification represents a manually entered code; do not assume outgoing email delivery."
+  ]
+}

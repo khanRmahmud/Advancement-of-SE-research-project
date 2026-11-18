@@ -1,0 +1,229 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { setImmediate } from 'node:timers/promises';
+
+import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+import type { DatabaseCommunity } from './communities.mappers.js';
+
+function communityWithId(id: number): DatabaseCommunity {
+  return { id } as DatabaseCommunity;
+}
+
+const getCommunityByNameMock = mock.fn(
+  async (_name: string): Promise<DatabaseCommunity | null> =>
+    communityWithId(23),
+);
+
+const joinCommunityMock = mock.fn(
+  async (_userId: number, _communityId: number): Promise<void> => {},
+);
+
+const unexpectedDependencyMock = mock.fn((): never => {
+  throw new Error('Unexpected dependency invocation');
+});
+
+mock.module('./communities.repositories.js', {
+  namedExports: {
+    createCommunity: unexpectedDependencyMock,
+    getAllCommunities: unexpectedDependencyMock,
+    getCommunityByName: getCommunityByNameMock,
+    getCommunityPosts: unexpectedDependencyMock,
+    getJoinedCommunities: unexpectedDependencyMock,
+    joinCommunity: joinCommunityMock,
+    leaveCommunity: unexpectedDependencyMock,
+    updateCommunity: unexpectedDependencyMock,
+  },
+});
+
+mock.module('./communities.mappers.js', {
+  namedExports: {
+    toCommunityContract: unexpectedDependencyMock,
+  },
+});
+
+mock.module('../posts/posts.mapper.js', {
+  namedExports: {
+    toPostContract: unexpectedDependencyMock,
+  },
+});
+
+const { joinCommunityService } = await import('./communities.services.js');
+
+beforeEach(() => {
+  getCommunityByNameMock.mock.resetCalls();
+  joinCommunityMock.mock.resetCalls();
+  unexpectedDependencyMock.mock.resetCalls();
+
+  getCommunityByNameMock.mock.mockImplementation(
+    async (_name: string) => communityWithId(23),
+  );
+  joinCommunityMock.mock.mockImplementation(
+    async (_userId: number, _communityId: number) => {},
+  );
+});
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+test('joins the resolved community and returns its joined membership status', async () => {
+  const result = await joinCommunityService('typescript', 71);
+
+  assert.deepEqual(result, { communityId: 23, joined: true });
+  assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+  assert.deepEqual(getCommunityByNameMock.mock.calls[0]!.arguments, [
+    'typescript',
+  ]);
+  assert.equal(joinCommunityMock.mock.callCount(), 1);
+  assert.deepEqual(joinCommunityMock.mock.calls[0]!.arguments, [71, 23]);
+  assert.equal(unexpectedDependencyMock.mock.callCount(), 0);
+});
+
+test('rejects a missing community with the specified not-found error without joining', async () => {
+  getCommunityByNameMock.mock.mockImplementation(async () => null);
+
+  await assert.rejects(joinCommunityService('missing', 71), (error: unknown) => {
+    assert.ok(error instanceof AppError);
+    assert.deepEqual(
+      error,
+      new AppError(
+        HttpStatus.NOT_FOUND,
+        ErrorCode.COMMUNITY_NOT_FOUND,
+        'Community not found.',
+      ),
+    );
+    return true;
+  });
+
+  assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+  assert.deepEqual(getCommunityByNameMock.mock.calls[0]!.arguments, ['missing']);
+  assert.equal(joinCommunityMock.mock.callCount(), 0);
+});
+
+test('propagates a lookup failure unchanged and does not attempt membership creation', async () => {
+  const failure = new Error('Community lookup failed');
+  getCommunityByNameMock.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    joinCommunityService('typescript', 71),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+  assert.deepEqual(getCommunityByNameMock.mock.calls[0]!.arguments, [
+    'typescript',
+  ]);
+  assert.equal(joinCommunityMock.mock.callCount(), 0);
+});
+
+test('propagates a membership write failure unchanged instead of reporting joined status', async () => {
+  const failure = new Error('Membership write failed');
+  joinCommunityMock.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    joinCommunityService('typescript', 71),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+  assert.equal(joinCommunityMock.mock.callCount(), 1);
+  assert.deepEqual(joinCommunityMock.mock.calls[0]!.arguments, [71, 23]);
+});
+
+test('waits for community lookup before attempting to join', async () => {
+  const lookup = deferred<DatabaseCommunity | null>();
+  getCommunityByNameMock.mock.mockImplementation(() => lookup.promise);
+
+  let settled = false;
+  const resultPromise = joinCommunityService('delayed', 71).then((result) => {
+    settled = true;
+    return result;
+  });
+
+  try {
+    await setImmediate();
+
+    assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+    assert.equal(joinCommunityMock.mock.callCount(), 0);
+    assert.equal(settled, false);
+  } finally {
+    lookup.resolve(communityWithId(98));
+  }
+
+  assert.deepEqual(await resultPromise, { communityId: 98, joined: true });
+  assert.equal(joinCommunityMock.mock.callCount(), 1);
+  assert.deepEqual(joinCommunityMock.mock.calls[0]!.arguments, [71, 98]);
+});
+
+test('does not report successful membership until the join operation completes', async () => {
+  const write = deferred<void>();
+  joinCommunityMock.mock.mockImplementation(() => write.promise);
+
+  let settled = false;
+  const resultPromise = joinCommunityService('typescript', 71).then((result) => {
+    settled = true;
+    return result;
+  });
+
+  try {
+    await setImmediate();
+
+    assert.equal(joinCommunityMock.mock.callCount(), 1);
+    assert.deepEqual(joinCommunityMock.mock.calls[0]!.arguments, [71, 23]);
+    assert.equal(settled, false);
+  } finally {
+    write.resolve(undefined);
+  }
+
+  assert.deepEqual(await resultPromise, { communityId: 23, joined: true });
+  assert.equal(settled, true);
+});
+
+test('passes boundary inputs through to the repositories without substituting identifiers', async () => {
+  getCommunityByNameMock.mock.mockImplementation(async () => communityWithId(0));
+
+  const result = await joinCommunityService('', 0);
+
+  assert.deepEqual(result, { communityId: 0, joined: true });
+  assert.equal(getCommunityByNameMock.mock.callCount(), 1);
+  assert.deepEqual(getCommunityByNameMock.mock.calls[0]!.arguments, ['']);
+  assert.equal(joinCommunityMock.mock.callCount(), 1);
+  assert.deepEqual(joinCommunityMock.mock.calls[0]!.arguments, [0, 0]);
+});
+
+test('creates a separate membership for each user joining the same community', async () => {
+  const first = await joinCommunityService('typescript', 71);
+  const second = await joinCommunityService('typescript', 82);
+
+  assert.deepEqual(first, { communityId: 23, joined: true });
+  assert.deepEqual(second, { communityId: 23, joined: true });
+  assert.equal(getCommunityByNameMock.mock.callCount(), 2);
+  assert.deepEqual(
+    getCommunityByNameMock.mock.calls.map((call) => call.arguments),
+    [['typescript'], ['typescript']],
+  );
+  assert.equal(joinCommunityMock.mock.callCount(), 2);
+  assert.deepEqual(
+    joinCommunityMock.mock.calls.map((call) => call.arguments),
+    [
+      [71, 23],
+      [82, 23],
+    ],
+  );
+});

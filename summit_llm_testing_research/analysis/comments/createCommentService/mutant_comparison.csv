@@ -1,0 +1,3 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+comments,createCommentService,src/comments/comments.services.ts,0,BlockStatement,79,35,91,2,{},Killed,Killed
+comments,createCommentService,src/comments/comments.services.ts,1,ObjectLiteral,88,10,90,4,{},Killed,Killed

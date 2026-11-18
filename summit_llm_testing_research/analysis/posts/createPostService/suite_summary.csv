@@ -1,0 +1,3 @@
+﻿feature,function,method,compilation,execution,tests,test_pass,test_fail,module_line_coverage_percent,module_branch_coverage_percent,coverage_scope,mutants_total,killed,timeout,survived,no_coverage,other_mutant_statuses,stryker_mutation_score_percent,strict_kill_percent
+posts,createPostService,baseline,passed,passed,8,8,0,43.71,100.0,module_level_only,8,8,0,0,0,0,100.0,100.0
+posts,createPostService,guided,passed,passed,8,8,0,43.71,100.0,module_level_only,8,8,0,0,0,0,100.0,100.0

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "comments",
+  "target_function": "updateCommentService",
+  "source_file": "src/comments/comments.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "COMMENT-EDIT-01",
+      "text": "A user can edit and save changes to their own comment.",
+      "evidence": "Sprint 2 user story: edit own comments, save changes and see edited comments."
+    },
+    {
+      "id": "COMMENT-EDIT-02",
+      "text": "Another user must not be permitted to edit someone else’s comment.",
+      "evidence": "Sprint 2 user story: edit button for comments owned by the signed-in user; Product Backlog: edit own replies."
+    }
+  ],
+  "evaluation_notes": []
+}

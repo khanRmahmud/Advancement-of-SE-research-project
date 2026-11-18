@@ -1,0 +1,34 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Summit – updateCommentService mutation comparison</title>
+    <style>
+    body{max-width:1120px;margin:35px auto;padding:0 20px;font:16px/1.5 system-ui,sans-serif;color:#202328}
+    table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #e2e5e8;text-align:left;padding:12px 10px;vertical-align:top}th{background:#f5f6f8}
+    small{color:#656a70;display:block;font-size:12px}code{overflow-wrap:anywhere}.status{padding:4px 8px;border-radius:5px;font-weight:650;font-size:13px}
+    .kill{color:#14632e;background:#e5f5e8}.timeout{color:#9a6200;background:#fff2d8}.survive{color:#a12222;background:#ffe5e5}.other{color:#555;background:#eee}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin:28px 0}.card{border:1px solid #d9dfe4;border-radius:12px;padding:20px}.card h3{margin-top:0}
+    .big{font-size:36px;font-weight:bold}.sub{color:#656a70}.bar{height:13px;border-radius:10px;display:flex;overflow:hidden;background:#edf0f2;margin-top:12px}.k{background:#16a34a}.t{background:#e4ac38}.s{background:#d04e4e}
+    .note{color:#595e65;font-size:14px}@media(max-width:700px){.cards{grid-template-columns:1fr}}@media print{.card{break-inside:avoid}}
+    </style></head><body>
+    <h1>updateCommentService — LLM unit-test comparison</h1>
+    <p class="note">Main study; one generated suite per arm. Exactly matching mutant definitions verified before this report was generated.</p>
+    <div class="cards"><section class="card"><h3>Baseline</h3>
+        <div class="big">2 / 2</div>
+        <div class="sub">Explicitly killed by failing tests</div>
+        <div class="bar"><div class="k" style="width:100.00%"></div><div class="t" style="width:0.00%"></div><div class="s" style="width:0.00%"></div></div>
+        <p>0 timed out · 0 survived · 0 no coverage</p>
+        <p><strong>Official mutation score: 100.0%</strong></p>
+        <p>Original tests passed: 8/8</p>
+        <p>Module line coverage: 47.51%</p></section><section class="card"><h3>Specification-guided</h3>
+        <div class="big">2 / 2</div>
+        <div class="sub">Explicitly killed by failing tests</div>
+        <div class="bar"><div class="k" style="width:100.00%"></div><div class="t" style="width:0.00%"></div><div class="s" style="width:0.00%"></div></div>
+        <p>0 timed out · 0 survived · 0 no coverage</p>
+        <p><strong>Official mutation score: 100.0%</strong></p>
+        <p>Original tests passed: 8/8</p>
+        <p>Module line coverage: 47.51%</p></section></div>
+    <h2>Individual mutant outcomes</h2>
+    <table><thead><tr><th>Mutant ID</th><th>Mutation</th><th>Baseline</th><th>Guided</th></tr></thead><tbody><tr><td>0</td><td><strong>BlockStatement</strong><small>Line 149 · replacement: <code>{}</code></small></td><td><span class="status kill">Killed</span></td><td><span class="status kill">Killed</span></td></tr>
+<tr><td>1</td><td><strong>ObjectLiteral</strong><small>Line 152 · replacement: <code>{}</code></small></td><td><span class="status kill">Killed</span></td><td><span class="status kill">Killed</span></td></tr></tbody></table>
+    <p class="note">A killed mutant caused a failing test; a timeout exceeded the execution limit; a survived mutant passed. Stryker counts killed and timed-out mutants in its official mutation score. Coverage values are for the entire source module, not the individual target function. These outcomes do not establish general superiority from one function.</p>
+    </body></html>

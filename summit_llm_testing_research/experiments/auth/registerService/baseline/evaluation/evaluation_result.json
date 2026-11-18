@@ -1,0 +1,33 @@
+{
+  "protocol": "main-study-evaluation-v1",
+  "feature": "auth",
+  "target": "registerService",
+  "method": "baseline",
+  "generated_test_sha256": "bf044f7e710ef1c445f50876f646cd47a1f1bc0cab162e2387a6fc85024180d9",
+  "source_sha256": "9116f76eec6c947466daf26b84d417c771d7d47b3d00d07f2a51703a8e31282b",
+  "started_utc": "2026-11-14T22:12:34.061588+00:00",
+  "compilation": "passed",
+  "execution": "passed",
+  "node_exit_code": 0,
+  "tests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "coverage": {
+    "status": "module_level_only",
+    "covered_file": "src\\auth\\auth.services.ts",
+    "lh": 75,
+    "lf": 175,
+    "brh": 9,
+    "brf": 9,
+    "line_percent": 42.86,
+    "branch_percent": 100.0
+  },
+  "mutations": "not_run_in_this_step",
+  "original_test_edited": false,
+  "updated_utc": "2026-11-14T22:12:40.391506+00:00"
+}

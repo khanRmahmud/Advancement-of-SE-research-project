@@ -1,0 +1,272 @@
+import test, { mock } from 'node:test';
+import assert from 'node:assert/strict';
+
+import type { DatabaseCommunity } from './communities.mappers.js';
+
+type CommunityContract = ReturnType<
+  typeof import('./communities.mappers.js').toCommunityContract
+>;
+
+const getAllCommunitiesMock = mock.fn(
+  async (): Promise<DatabaseCommunity[]> => [],
+);
+
+const toCommunityContractMock = mock.fn(
+  (_community: DatabaseCommunity): CommunityContract => {
+    throw new Error('Unexpected mapper invocation');
+  },
+);
+
+function unexpectedDependencyCall(): never {
+  throw new Error('Unexpected dependency invocation');
+}
+
+mock.module('./communities.repositories.js', {
+  namedExports: {
+    createCommunity: unexpectedDependencyCall,
+    getAllCommunities: getAllCommunitiesMock,
+    getCommunityByName: unexpectedDependencyCall,
+    getCommunityPosts: unexpectedDependencyCall,
+    getJoinedCommunities: unexpectedDependencyCall,
+    joinCommunity: unexpectedDependencyCall,
+    leaveCommunity: unexpectedDependencyCall,
+    updateCommunity: unexpectedDependencyCall,
+  },
+});
+
+mock.module('./communities.mappers.js', {
+  namedExports: {
+    toCommunityContract: toCommunityContractMock,
+  },
+});
+
+mock.module('../posts/posts.mapper.js', {
+  namedExports: {
+    toPostContract: unexpectedDependencyCall,
+  },
+});
+
+const { getAllCommunitiesService } = await import('./communities.services.js');
+
+function resetMocks(): void {
+  getAllCommunitiesMock.mock.resetCalls();
+  getAllCommunitiesMock.mock.mockImplementation(async () => []);
+
+  toCommunityContractMock.mock.resetCalls();
+  toCommunityContractMock.mock.mockImplementation(() => {
+    throw new Error('Unexpected mapper invocation');
+  });
+}
+
+// These opaque fixtures deliberately distinguish repository rows from mapper output.
+function row(marker: string): DatabaseCommunity {
+  return { repositoryMarker: marker } as unknown as DatabaseCommunity;
+}
+
+function contract(marker: string): CommunityContract {
+  return { contractMarker: marker } as unknown as CommunityContract;
+}
+
+function assertListingCalls(count: number): void {
+  assert.equal(getAllCommunitiesMock.mock.callCount(), count);
+  for (const call of getAllCommunitiesMock.mock.calls) {
+    assert.deepEqual(call.arguments, []);
+  }
+}
+
+test('returns an empty communities array without invoking the mapper', { concurrency: false }, async () => {
+  resetMocks();
+
+  const result = await getAllCommunitiesService();
+
+  assert.deepEqual(result, { communities: [] });
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), 0);
+});
+
+test('returns the mapped contract rather than the repository row', { concurrency: false }, async () => {
+  resetMocks();
+  const community = row('single');
+  const mappedCommunity = contract('single');
+  getAllCommunitiesMock.mock.mockImplementation(async () => [community]);
+  toCommunityContractMock.mock.mockImplementation((received) => {
+    assert.strictEqual(received, community);
+    return mappedCommunity;
+  });
+
+  const result = await getAllCommunitiesService();
+
+  assert.deepEqual(result, { communities: [mappedCommunity] });
+  assert.strictEqual(result.communities[0], mappedCommunity);
+  assert.notStrictEqual(result.communities[0], community);
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), 1);
+});
+
+test('maps every repository row in its original order without mutating the array', { concurrency: false }, async () => {
+  resetMocks();
+  const rows = [row('third'), row('first'), row('second')];
+  const originalRows = [...rows];
+  const mapped = [contract('third'), contract('first'), contract('second')];
+  getAllCommunitiesMock.mock.mockImplementation(async () => rows);
+  toCommunityContractMock.mock.mockImplementation((received) => {
+    const index = originalRows.indexOf(received);
+    assert.notEqual(index, -1);
+    return mapped[index]!;
+  });
+
+  const result = await getAllCommunitiesService();
+
+  assert.deepEqual(result, { communities: mapped });
+  assert.notStrictEqual(result.communities, rows);
+  assert.deepEqual(rows, originalRows);
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), rows.length);
+  for (let index = 0; index < rows.length; index++) {
+    assert.strictEqual(
+      toCommunityContractMock.mock.calls[index]!.arguments[0],
+      originalRows[index],
+    );
+    assert.strictEqual(result.communities[index], mapped[index]);
+  }
+});
+
+test('propagates a repository Error unchanged and does not invoke the mapper', { concurrency: false }, async () => {
+  resetMocks();
+  const failure = new Error('Repository unavailable');
+  getAllCommunitiesMock.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(getAllCommunitiesService(), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), 0);
+});
+
+test('preserves a non-Error repository rejection without wrapping it', { concurrency: false }, async () => {
+  resetMocks();
+  const failure = { reason: 'repository rejection' };
+  getAllCommunitiesMock.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(getAllCommunitiesService(), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), 0);
+});
+
+test('propagates mapper failures and stops before mapping subsequent rows', { concurrency: false }, async () => {
+  resetMocks();
+  const rows = [row('valid'), row('failing'), row('not-visited')];
+  const mappedFirst = contract('valid');
+  const failure = new Error('Mapping failed');
+  getAllCommunitiesMock.mock.mockImplementation(async () => rows);
+  toCommunityContractMock.mock.mockImplementation((received) => {
+    if (received === rows[0]) {
+      return mappedFirst;
+    }
+    if (received === rows[1]) {
+      throw failure;
+    }
+    assert.fail('Rows after the failing row must not be mapped');
+  });
+
+  await assert.rejects(getAllCommunitiesService(), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertListingCalls(1);
+  assert.equal(toCommunityContractMock.mock.callCount(), 2);
+  assert.strictEqual(
+    toCommunityContractMock.mock.calls[0]!.arguments[0],
+    rows[0],
+  );
+  assert.strictEqual(
+    toCommunityContractMock.mock.calls[1]!.arguments[0],
+    rows[1],
+  );
+});
+
+test('waits for the repository promise before mapping its rows', { concurrency: false }, async () => {
+  resetMocks();
+  const community = row('deferred');
+  const mappedCommunity = contract('deferred');
+  let resolveRows!: (rows: DatabaseCommunity[]) => void;
+  const pendingRows = new Promise<DatabaseCommunity[]>((resolve) => {
+    resolveRows = resolve;
+  });
+
+  getAllCommunitiesMock.mock.mockImplementation(() => pendingRows);
+  toCommunityContractMock.mock.mockImplementation(() => mappedCommunity);
+
+  let settled = false;
+  const pendingResult = getAllCommunitiesService().then((result) => {
+    settled = true;
+    return result;
+  });
+
+  await Promise.resolve();
+
+  assertListingCalls(1);
+  assert.equal(settled, false);
+  assert.equal(toCommunityContractMock.mock.callCount(), 0);
+
+  resolveRows([community]);
+  const result = await pendingResult;
+
+  assert.deepEqual(result, { communities: [mappedCommunity] });
+  assert.equal(settled, true);
+  assert.equal(toCommunityContractMock.mock.callCount(), 1);
+  assert.strictEqual(
+    toCommunityContractMock.mock.calls[0]!.arguments[0],
+    community,
+  );
+});
+
+test('queries and maps fresh repository results on every invocation', { concurrency: false }, async () => {
+  resetMocks();
+  const firstRow = row('first-request');
+  const secondRow = row('second-request');
+  const firstContract = contract('first-request');
+  const secondContract = contract('second-request');
+  let repositoryCalls = 0;
+
+  getAllCommunitiesMock.mock.mockImplementation(async () => {
+    repositoryCalls++;
+    return repositoryCalls === 1 ? [firstRow] : [secondRow];
+  });
+  toCommunityContractMock.mock.mockImplementation((received) => {
+    if (received === firstRow) {
+      return firstContract;
+    }
+    assert.strictEqual(received, secondRow);
+    return secondContract;
+  });
+
+  const firstResult = await getAllCommunitiesService();
+  const secondResult = await getAllCommunitiesService();
+
+  assert.deepEqual(firstResult, { communities: [firstContract] });
+  assert.deepEqual(secondResult, { communities: [secondContract] });
+  assert.notStrictEqual(firstResult, secondResult);
+  assert.notStrictEqual(firstResult.communities, secondResult.communities);
+  assertListingCalls(2);
+  assert.equal(toCommunityContractMock.mock.callCount(), 2);
+  assert.strictEqual(
+    toCommunityContractMock.mock.calls[0]!.arguments[0],
+    firstRow,
+  );
+  assert.strictEqual(
+    toCommunityContractMock.mock.calls[1]!.arguments[0],
+    secondRow,
+  );
+});

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "comments",
+  "target_function": "createCommentService",
+  "source_file": "src/comments/comments.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "COMMENT-CREATE-01",
+      "text": "A user can add a comment under a post.",
+      "evidence": "Sprint 1 user story: add comment input and submit button; Sprint 3 community discussion story."
+    },
+    {
+      "id": "COMMENT-CREATE-02",
+      "text": "A newly submitted comment is saved so it can be displayed in the post discussion.",
+      "evidence": "Sprint 1 user story: comment saving and update comments section after submission."
+    }
+  ],
+  "evaluation_notes": []
+}

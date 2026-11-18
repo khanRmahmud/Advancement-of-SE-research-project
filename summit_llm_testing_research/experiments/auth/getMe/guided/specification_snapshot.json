@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "auth",
+  "target_function": "getMe",
+  "source_file": "src/auth/auth.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "AUTH-ME-01",
+      "text": "A signed-in user can retrieve their own account information for the profile view.",
+      "evidence": "Sprint 3 user story: profile screen displays signed-in user account information from backend."
+    }
+  ],
+  "evaluation_notes": [
+    "Documented behavior is narrow; avoid padding requirements or forcing eight distinct meaningful test cases."
+  ]
+}

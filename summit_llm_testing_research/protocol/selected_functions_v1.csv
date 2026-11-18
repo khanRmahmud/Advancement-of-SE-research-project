@@ -1,0 +1,13 @@
+﻿feature,function,source_file,requirements_count,selection_reason,one_generation_per_arm,specification_json
+auth,loginService,src/auth/auth.services.ts,3,Authentication; verified account gate; token,yes,specifications/approved/loginService.json
+auth,registerService,src/auth/auth.services.ts,3,Registration; hashed password; console-code verification,yes,specifications/approved/registerService.json
+auth,getMe,src/auth/auth.services.ts,1,Signed-in user profile retrieval,yes,specifications/approved/getMe.json
+posts,createPostService,src/posts/posts.service.ts,3,Post creation; community; anonymity,yes,specifications/approved/createPostService.json
+posts,updatePostService,src/posts/posts.service.ts,2,Post edit; owner authorization,yes,specifications/approved/updatePostService.json
+posts,votePostService,src/posts/posts.service.ts,2,Post voting,yes,specifications/approved/votePostService.json
+comments,createCommentService,src/comments/comments.services.ts,2,Comment creation under post,yes,specifications/approved/createCommentService.json
+comments,updateCommentService,src/comments/comments.services.ts,2,Comment edit; author-only rule,yes,specifications/approved/updateCommentService.json
+comments,voteCommentService,src/comments/comments.services.ts,1,Reply/comment voting (backend feature; UI not verified),yes,specifications/approved/voteCommentService.json
+communities,getAllCommunitiesService,src/communities/communities.services.ts,1,Community discovery/listing,yes,specifications/approved/getAllCommunitiesService.json
+communities,joinCommunityService,src/communities/communities.services.ts,2,Community joining,yes,specifications/approved/joinCommunityService.json
+communities,getJoinedCommunitiesService,src/communities/communities.services.ts,1,Retrieve joined communities,yes,specifications/approved/getJoinedCommunitiesService.json

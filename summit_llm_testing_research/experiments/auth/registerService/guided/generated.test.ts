@@ -1,0 +1,308 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+
+function makeDependencies() {
+  return {
+    findByEmail: mock.fn(async (_email: string): Promise<unknown> => null),
+    findByUsername: mock.fn(async (_username: string): Promise<unknown> => null),
+    hash: mock.fn(async (_password: string) => 'argon2-password-hash'),
+    createVerificationCode: mock.fn((_email: string) => ({
+      code: '004271',
+      codeHash: 'verification-code-hash',
+    })),
+    createUnverifiedUser: mock.fn(
+      async (
+        _email: string,
+        _username: string,
+        _passwordHash: string,
+        _codeHash: string,
+      ): Promise<void> => {},
+    ),
+    sendVerificationCode: mock.fn((_email: string, _code: string): void => {}),
+  };
+}
+
+let dependencies = makeDependencies();
+let trace: string[] = [];
+
+function unexpectedDependency(): never {
+  throw new Error('registerService called an unrelated dependency');
+}
+
+mock.module('./auth.repositories.js', {
+  namedExports: {
+    findByEmail: (email: string) => {
+      trace.push('findByEmail');
+      return dependencies.findByEmail(email);
+    },
+    findByUsername: (username: string) => {
+      trace.push('findByUsername');
+      return dependencies.findByUsername(username);
+    },
+    createUnverifiedUser: (
+      email: string,
+      username: string,
+      passwordHash: string,
+      codeHash: string,
+    ) => {
+      trace.push('createUnverifiedUser');
+      return dependencies.createUnverifiedUser(
+        email,
+        username,
+        passwordHash,
+        codeHash,
+      );
+    },
+    findById: unexpectedDependency,
+    savePasswordResetCode: unexpectedDependency,
+    consumePasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('argon2', {
+  defaultExport: {
+    hash: (password: string) => {
+      trace.push('hash');
+      return dependencies.hash(password);
+    },
+    verify: unexpectedDependency,
+  },
+});
+
+mock.module('./verification/verification.code.js', {
+  namedExports: {
+    createVerificationCode: (email: string) => {
+      trace.push('createVerificationCode');
+      return dependencies.createVerificationCode(email);
+    },
+  },
+});
+
+mock.module('./verification/verification.console.js', {
+  namedExports: {
+    sendVerificationCode: (email: string, code: string) => {
+      trace.push('sendVerificationCode');
+      return dependencies.sendVerificationCode(email, code);
+    },
+  },
+});
+
+mock.module('./auth.mappers.js', {
+  namedExports: { toUserContract: unexpectedDependency },
+});
+
+mock.module('./auth.token.js', {
+  namedExports: { createToken: unexpectedDependency },
+});
+
+mock.module('./password-reset/password-reset.code.js', {
+  namedExports: {
+    createPasswordResetCode: unexpectedDependency,
+    hashPasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('./password-reset/password-reset.console.js', {
+  namedExports: { sendPasswordResetCode: unexpectedDependency },
+});
+
+const { registerService } = await import('./auth.services.js');
+
+const request = {
+  email: '  Alice.Example@EXAMPLE.COM \t',
+  username: ' \tAlice_Example  ',
+  password: '  P@ssword-秘密-123!  ',
+};
+
+const normalizedEmail = 'alice.example@example.com';
+const normalizedUsername = 'Alice_Example';
+
+const completeTrace = [
+  'findByEmail',
+  'findByUsername',
+  'hash',
+  'createVerificationCode',
+  'createUnverifiedUser',
+  'sendVerificationCode',
+];
+
+beforeEach(() => {
+  dependencies = makeDependencies();
+  trace = [];
+});
+
+test('registers with normalized identifiers, securely hashed password, and a logged verification code', async () => {
+  const result = await registerService(request);
+
+  assert.deepEqual(result, {
+    message: 'Registration successful. Verify your email before logging in.',
+  });
+  assert.deepEqual(trace, completeTrace);
+
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail]],
+  );
+  assert.deepEqual(
+    dependencies.findByUsername.mock.calls.map((call) => call.arguments),
+    [[normalizedUsername]],
+  );
+  assert.deepEqual(
+    dependencies.hash.mock.calls.map((call) => call.arguments),
+    [[request.password]],
+  );
+  assert.deepEqual(
+    dependencies.createVerificationCode.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail]],
+  );
+  assert.deepEqual(
+    dependencies.createUnverifiedUser.mock.calls.map((call) => call.arguments),
+    [[
+      normalizedEmail,
+      normalizedUsername,
+      'argon2-password-hash',
+      'verification-code-hash',
+    ]],
+  );
+  assert.deepEqual(
+    dependencies.sendVerificationCode.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail, '004271']],
+  );
+});
+
+test('rejects an existing email before checking the username or creating credentials', async () => {
+  dependencies.findByEmail.mock.mockImplementation(async () => ({ id: 1 }));
+
+  await assert.rejects(
+    registerService(request),
+    new AppError(
+      HttpStatus.CONFLICT,
+      ErrorCode.EMAIL_TAKEN,
+      'Email already registered.',
+    ),
+  );
+
+  assert.deepEqual(trace, ['findByEmail']);
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail]],
+  );
+  assert.equal(dependencies.findByUsername.mock.callCount(), 0);
+  assert.equal(dependencies.hash.mock.callCount(), 0);
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 0);
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('rejects an existing username without hashing or creating an account', async () => {
+  dependencies.findByUsername.mock.mockImplementation(async () => ({ id: 2 }));
+
+  await assert.rejects(
+    registerService(request),
+    new AppError(
+      HttpStatus.CONFLICT,
+      ErrorCode.USERNAME_TAKEN,
+      'Username already taken.',
+    ),
+  );
+
+  assert.deepEqual(trace, ['findByEmail', 'findByUsername']);
+  assert.deepEqual(
+    dependencies.findByUsername.mock.calls.map((call) => call.arguments),
+    [[normalizedUsername]],
+  );
+  assert.equal(dependencies.hash.mock.callCount(), 0);
+  assert.equal(dependencies.createVerificationCode.mock.callCount(), 0);
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 0);
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('propagates an email lookup failure without continuing registration', async () => {
+  const failure = new Error('Email lookup failed');
+  dependencies.findByEmail.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService(request), (error: unknown) => error === failure);
+
+  assert.deepEqual(trace, ['findByEmail']);
+  assert.equal(dependencies.findByUsername.mock.callCount(), 0);
+  assert.equal(dependencies.hash.mock.callCount(), 0);
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 0);
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('propagates password hashing failure without generating a code or storing plaintext', async () => {
+  const failure = new Error('Password hashing failed');
+  dependencies.hash.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService(request), (error: unknown) => error === failure);
+
+  assert.deepEqual(trace, completeTrace.slice(0, 3));
+  assert.deepEqual(
+    dependencies.hash.mock.calls.map((call) => call.arguments),
+    [[request.password]],
+  );
+  assert.equal(dependencies.createVerificationCode.mock.callCount(), 0);
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 0);
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('propagates verification-code generation failure without persisting an account', async () => {
+  const failure = new Error('Verification code generation failed');
+  dependencies.createVerificationCode.mock.mockImplementation(() => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService(request), (error: unknown) => error === failure);
+
+  assert.deepEqual(trace, completeTrace.slice(0, 4));
+  assert.deepEqual(
+    dependencies.createVerificationCode.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail]],
+  );
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 0);
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('awaits account persistence and does not display a verification code when persistence fails', async () => {
+  const failure = new Error('Account persistence failed');
+  dependencies.createUnverifiedUser.mock.mockImplementation(async () => {
+    await Promise.resolve();
+    throw failure;
+  });
+
+  await assert.rejects(registerService(request), (error: unknown) => error === failure);
+
+  assert.deepEqual(trace, completeTrace.slice(0, 5));
+  assert.deepEqual(
+    dependencies.createUnverifiedUser.mock.calls.map((call) => call.arguments),
+    [[
+      normalizedEmail,
+      normalizedUsername,
+      'argon2-password-hash',
+      'verification-code-hash',
+    ]],
+  );
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+});
+
+test('propagates a synchronous console-code sender failure after storing the account once', async () => {
+  const failure = new Error('Verification console unavailable');
+  dependencies.sendVerificationCode.mock.mockImplementation(() => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService(request), (error: unknown) => error === failure);
+
+  assert.deepEqual(trace, completeTrace);
+  assert.equal(dependencies.createUnverifiedUser.mock.callCount(), 1);
+  assert.deepEqual(
+    dependencies.sendVerificationCode.mock.calls.map((call) => call.arguments),
+    [[normalizedEmail, '004271']],
+  );
+});

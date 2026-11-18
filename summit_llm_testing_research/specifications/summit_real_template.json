@@ -1,0 +1,11 @@
+{
+  "feature": "[Name of an actual Summit backend function]",
+  "requirements": [
+    "[Verbatim or independently verified acceptance criterion 1]",
+    "[Verbatim or independently verified acceptance criterion 2]"
+  ],
+  "edge_cases": [
+    "[Requirement-supported edge case; include expected result]"
+  ],
+  "notes": "Fill this after inspecting the ACTUAL Summit service code and team-approved user stories. Never infer requirements from buggy implementation."
+}

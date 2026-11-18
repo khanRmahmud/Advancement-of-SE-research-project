@@ -1,0 +1,4 @@
+node_modules/
+reports/
+*.baseline.r*.test.ts
+*.guided.r*.test.ts

@@ -1,0 +1,20 @@
+{
+  "protocol": "summit-main-study-mutation-v1",
+  "feature": "auth",
+  "target": "registerService",
+  "arm": "guided",
+  "source_file": "src/auth/auth.services.ts",
+  "source_sha256": "9116f76eec6c947466daf26b84d417c771d7d47b3d00d07f2a51703a8e31282b",
+  "original_generated_test_sha256": "7d4454b57e6109e60cb160cfe1afa6b94b886e5758d5d1b6475aac0be93bcebf",
+  "staged_generated_test_sha256": "7d4454b57e6109e60cb160cfe1afa6b94b886e5758d5d1b6475aac0be93bcebf",
+  "compiler_sha256": "5976048d1266598210427c5d5d1469a0cc7f00e1d92b31c02bd91419e07440bd",
+  "config_sha256": "a85924952268fbc62b0774f80dd1fb2f6b9f8bde4ee619633dd5c297cfea2922",
+  "mutation_scope": "exported_function_only",
+  "shared_helpers_in_mutation_scope": false,
+  "stryker_coverageAnalysis": "off",
+  "timestamp_utc": "2026-11-14T22:14:10.299828+00:00",
+  "original_generated_test_modified": false,
+  "exit_code": 0,
+  "status": "passed",
+  "finished_utc": "2026-11-14T22:14:19.722402+00:00"
+}

@@ -1,0 +1,76 @@
+TAP version 13
+# (node:18076) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:18076) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: returns an empty communities array without invoking the mapper
+ok 1 - returns an empty communities array without invoking the mapper
+  ---
+  duration_ms: 2.306
+  type: 'test'
+  ...
+# Subtest: returns the mapped contract rather than the repository row
+ok 2 - returns the mapped contract rather than the repository row
+  ---
+  duration_ms: 0.3686
+  type: 'test'
+  ...
+# Subtest: maps every repository row in its original order without mutating the array
+ok 3 - maps every repository row in its original order without mutating the array
+  ---
+  duration_ms: 0.3309
+  type: 'test'
+  ...
+# Subtest: propagates a repository Error unchanged and does not invoke the mapper
+ok 4 - propagates a repository Error unchanged and does not invoke the mapper
+  ---
+  duration_ms: 0.6859
+  type: 'test'
+  ...
+# Subtest: preserves a non-Error repository rejection without wrapping it
+ok 5 - preserves a non-Error repository rejection without wrapping it
+  ---
+  duration_ms: 0.2614
+  type: 'test'
+  ...
+# Subtest: propagates mapper failures and stops before mapping subsequent rows
+ok 6 - propagates mapper failures and stops before mapping subsequent rows
+  ---
+  duration_ms: 0.3654
+  type: 'test'
+  ...
+# Subtest: waits for the repository promise before mapping its rows
+ok 7 - waits for the repository promise before mapping its rows
+  ---
+  duration_ms: 0.293
+  type: 'test'
+  ...
+# Subtest: queries and maps fresh repository results on every invocation
+ok 8 - queries and maps fresh repository results on every invocation
+  ---
+  duration_ms: 0.2948
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 179.0722
+# start of coverage report
+# -------------------------------------------------------------------------------------------------------------------
+# file                      | line % | branch % | funcs % | uncovered lines
+# -------------------------------------------------------------------------------------------------------------------
+# src                       |        |          |         | 
+#  communities              |        |          |         | 
+#   communities.services.ts |  37.50 |   100.00 |   11.11 | 35-49 52-76 87-94 97-106 109-128 134-145 151-162 169-176
+#  errors                   |        |          |         | 
+#   app.error.ts            |  30.00 |    50.00 |    0.00 | 3-9
+#   error-code.ts           |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts          |  92.86 |   100.00 |  100.00 | 14
+# -------------------------------------------------------------------------------------------------------------------
+# all files                 |  47.11 |    88.89 |   23.08 | 
+# -------------------------------------------------------------------------------------------------------------------
+# end of coverage report

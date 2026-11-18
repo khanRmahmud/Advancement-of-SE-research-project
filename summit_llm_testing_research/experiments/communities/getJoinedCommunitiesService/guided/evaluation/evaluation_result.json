@@ -1,0 +1,33 @@
+{
+  "protocol": "main-study-evaluation-v1",
+  "feature": "communities",
+  "target": "getJoinedCommunitiesService",
+  "method": "guided",
+  "generated_test_sha256": "e30794b4571db294afdefb7cfddcde207ee74acb1bdcd57e8bb9a432f5d1ee00",
+  "source_sha256": "5ca180c4381a9aed387a45b78d270f43bf56bd8f27d2d050dbab82fa8fc53086",
+  "started_utc": "2026-11-14T22:57:37.570286+00:00",
+  "compilation": "passed",
+  "execution": "passed",
+  "node_exit_code": 0,
+  "tests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "coverage": {
+    "status": "module_level_only",
+    "covered_file": "src\\communities\\communities.services.ts",
+    "lh": 68,
+    "lf": 176,
+    "brh": 3,
+    "brf": 3,
+    "line_percent": 38.64,
+    "branch_percent": 100.0
+  },
+  "mutations": "not_run_in_this_step",
+  "original_test_edited": false,
+  "updated_utc": "2026-11-14T22:57:42.221011+00:00"
+}

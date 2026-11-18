@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+jspm_packages/
+typings/
+.npm/
+.eslintcache
+.stylelintcache
+*.tgz
+.yarn-integrity
+.pnp
+.pnp.js
+
+# Production Builds and Artifacts
+build/
+dist/
+dist-ssr/
+out/
+generated/
+
+# Testing Coverage Outputs
+coverage/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# System and Log Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic Reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# macOS / Windows System Files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs and Editors
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# Local post image uploads
+app/server/uploads/

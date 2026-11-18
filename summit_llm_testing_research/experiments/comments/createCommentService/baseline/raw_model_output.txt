@@ -1,0 +1,238 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+const postRow = Object.freeze({ id: 101 });
+const commentRow = Object.freeze({ id: 202 });
+const mappedComment = Object.freeze({ id: 202, body: 'Mapped comment' });
+
+const getByIdPost = mock.fn(
+  async (_postId: number): Promise<unknown> => postRow,
+);
+
+const createComment = mock.fn(
+  async (
+    _postId: number,
+    _userId: number,
+    _body: string,
+    _parentId: number | null,
+    _isAnonymous: boolean,
+  ): Promise<unknown> => commentRow,
+);
+
+const toCommentContract = mock.fn(
+  (_comment: unknown): unknown => mappedComment,
+);
+
+function unexpectedRepositoryCall(): never {
+  throw new Error('Unexpected repository call');
+}
+
+mock.module('./comments.repositories.js', {
+  namedExports: {
+    getByIdPost,
+    createComment,
+    getCommentsByPostId: unexpectedRepositoryCall,
+    getCommentById: unexpectedRepositoryCall,
+    getCommentVote: unexpectedRepositoryCall,
+    removeCommentById: unexpectedRepositoryCall,
+    setCommentVote: unexpectedRepositoryCall,
+    updateCommentById: unexpectedRepositoryCall,
+  },
+});
+
+mock.module('./comments.mapper.js', {
+  namedExports: { toCommentContract },
+});
+
+const { createCommentService } = await import('./comments.services.js');
+
+beforeEach(() => {
+  getByIdPost.mock.resetCalls();
+  createComment.mock.resetCalls();
+  toCommentContract.mock.resetCalls();
+
+  getByIdPost.mock.mockImplementation(async () => postRow);
+  createComment.mock.mockImplementation(async () => commentRow);
+  toCommentContract.mock.mockImplementation(() => mappedComment);
+});
+
+function assertLookup(postId: number): void {
+  assert.deepEqual(
+    getByIdPost.mock.calls.map((call) => call.arguments),
+    [[postId]],
+  );
+}
+
+function assertCreation(
+  postId: number,
+  userId: number,
+  body: string,
+  isAnonymous: boolean,
+): void {
+  assert.deepEqual(
+    createComment.mock.calls.map((call) => call.arguments),
+    [[postId, userId, body, null, isAnonymous]],
+  );
+}
+
+function assertMapping(): void {
+  assert.equal(toCommentContract.mock.callCount(), 1);
+  assert.strictEqual(
+    toCommentContract.mock.calls[0]!.arguments[0],
+    commentRow,
+  );
+}
+
+test('creates a non-anonymous top-level comment and returns its mapped contract', async () => {
+  const result = await createCommentService(101, 303, {
+    body: 'A new comment',
+    isAnonymous: false,
+  });
+
+  assertLookup(101);
+  assertCreation(101, 303, 'A new comment', false);
+  assertMapping();
+  assert.deepEqual(result, { comment: mappedComment });
+  assert.strictEqual(result.comment, mappedComment);
+});
+
+test('preserves anonymous creation while forwarding the supplied author ID', async () => {
+  const result = await createCommentService(404, 505, {
+    body: 'An anonymous comment',
+    isAnonymous: true,
+  });
+
+  assertLookup(404);
+  assertCreation(404, 505, 'An anonymous comment', true);
+  assertMapping();
+  assert.strictEqual(result.comment, mappedComment);
+});
+
+test('passes an empty body to the repository without service-level validation', async () => {
+  const result = await createCommentService(101, 303, {
+    body: '',
+    isAnonymous: false,
+  });
+
+  assertLookup(101);
+  assertCreation(101, 303, '', false);
+  assertMapping();
+  assert.strictEqual(result.comment, mappedComment);
+});
+
+test('rejects a missing post with POST_NOT_FOUND and does not create or map a comment', async () => {
+  getByIdPost.mock.mockImplementation(async () => null);
+
+  await assert.rejects(
+    createCommentService(999, 303, {
+      body: 'Cannot be created',
+      isAnonymous: false,
+    }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    ),
+  );
+
+  assertLookup(999);
+  assert.equal(createComment.mock.callCount(), 0);
+  assert.equal(toCommentContract.mock.callCount(), 0);
+});
+
+test('propagates a post lookup failure without attempting creation or mapping', async () => {
+  const failure = new Error('Post lookup failed');
+  getByIdPost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    createCommentService(101, 303, {
+      body: 'A new comment',
+      isAnonymous: false,
+    }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertLookup(101);
+  assert.equal(createComment.mock.callCount(), 0);
+  assert.equal(toCommentContract.mock.callCount(), 0);
+});
+
+test('propagates a creation failure without invoking the mapper', async () => {
+  const failure = new Error('Comment insertion failed');
+  createComment.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    createCommentService(101, 303, {
+      body: 'A new comment',
+      isAnonymous: true,
+    }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertLookup(101);
+  assertCreation(101, 303, 'A new comment', true);
+  assert.equal(toCommentContract.mock.callCount(), 0);
+});
+
+test('propagates a mapper failure after successfully creating the comment', async () => {
+  const failure = new Error('Comment mapping failed');
+  toCommentContract.mock.mockImplementation(() => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    createCommentService(101, 303, {
+      body: 'A new comment',
+      isAnonymous: false,
+    }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertLookup(101);
+  assertCreation(101, 303, 'A new comment', false);
+  assertMapping();
+});
+
+test('waits for the post lookup before creating the comment', async () => {
+  let resolveLookup!: (value: unknown) => void;
+  const pendingLookup = new Promise<unknown>((resolve) => {
+    resolveLookup = resolve;
+  });
+  getByIdPost.mock.mockImplementation(() => pendingLookup);
+
+  const pendingResult = createCommentService(101, 303, {
+    body: 'Wait for the post',
+    isAnonymous: false,
+  });
+
+  try {
+    assertLookup(101);
+    assert.equal(createComment.mock.callCount(), 0);
+    assert.equal(toCommentContract.mock.callCount(), 0);
+  } finally {
+    resolveLookup(postRow);
+  }
+
+  const result = await pendingResult;
+
+  assertLookup(101);
+  assertCreation(101, 303, 'Wait for the post', false);
+  assertMapping();
+  assert.strictEqual(result.comment, mappedComment);
+});

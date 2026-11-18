@@ -1,0 +1,17 @@
+
+{
+  "project": "Summit",
+  "feature": "Post deletion authorization",
+  "target_module": "app/server/src/posts/posts.service.ts",
+  "target_function": "removePostService",
+  "source_notes": [
+    "Team user story: a user can edit and delete only their own posts.",
+    "Pre-existing posts API integration tests cover owner deletion, forbidden deletion by another user, and deletion of missing posts."
+  ],
+  "requirements": [
+    "The author of an existing post can delete that post.",
+    "A user who does not own an existing post cannot delete that post.",
+    "Attempting to delete a post that does not exist produces a not-found error."
+  ],
+  "notes": "Draft for independent requirement review before paid testing. Do not derive additional requirements from the implementation."
+}

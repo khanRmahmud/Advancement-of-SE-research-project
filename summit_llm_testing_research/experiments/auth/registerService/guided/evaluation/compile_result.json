@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "target": "registerService",
+  "arm": "guided",
+  "source_file": "src/auth/auth.services.ts",
+  "virtual_test_file": "src/auth/__research_registerService_guided.test.ts",
+  "archived_test_file": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\auth\\registerService\\guided\\generated.test.ts",
+  "compiled_test_js": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\.research-evaluation\\registerService\\guided\\dist\\auth\\__research_registerService_guided.test.js",
+  "typecheck_errors": 0,
+  "typescript_version": "6.0.2",
+  "excluded_preexisting_test_files": 3,
+  "original_test_modified": false
+}

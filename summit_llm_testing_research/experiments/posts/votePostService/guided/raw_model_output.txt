@@ -1,0 +1,207 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import type { PostVoteResponse } from '@summit/shared';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+const getByIdPost = mock.fn(
+  async (postId: number): Promise<{ id: number } | null> => ({ id: postId }),
+);
+
+const setPostVote = mock.fn(
+  async (
+    _postId: number,
+    _userId: number,
+    _value: number,
+  ): Promise<PostVoteResponse | null> => ({
+    votes: 1,
+    userVote: 1,
+  }),
+);
+
+function unexpectedDependencyCall(): never {
+  throw new Error('Unexpected dependency call');
+}
+
+mock.module('./posts.repositories.js', {
+  namedExports: {
+    createPost: unexpectedDependencyCall,
+    getAllPosts: unexpectedDependencyCall,
+    getByIdPost,
+    getCommunityById: unexpectedDependencyCall,
+    getPostVote: unexpectedDependencyCall,
+    removePost: unexpectedDependencyCall,
+    setPostVote,
+    updatePost: unexpectedDependencyCall,
+  },
+});
+
+mock.module('./posts.mapper.js', {
+  namedExports: {
+    toPostContract: unexpectedDependencyCall,
+  },
+});
+
+// Run with Node.js's --experimental-test-module-mocks flag.
+const { votePostService } = await import('./posts.service.js');
+
+beforeEach(() => {
+  getByIdPost.mock.resetCalls();
+  setPostVote.mock.resetCalls();
+
+  getByIdPost.mock.mockImplementation(async (postId) => ({ id: postId }));
+  setPostVote.mock.mockImplementation(async () => ({
+    votes: 1,
+    userVote: 1,
+  }));
+});
+
+function assertLookup(postId: number): void {
+  assert.equal(getByIdPost.mock.callCount(), 1);
+  assert.deepEqual(getByIdPost.mock.calls[0]!.arguments, [postId]);
+}
+
+function assertVoteWrite(
+  postId: number,
+  userId: number,
+  value: number,
+): void {
+  assert.equal(setPostVote.mock.callCount(), 1);
+  assert.deepEqual(setPostVote.mock.calls[0]!.arguments, [
+    postId,
+    userId,
+    value,
+  ]);
+}
+
+test('votePostService records an upvote and returns the repository voting state', { concurrency: false }, async () => {
+  const response: PostVoteResponse = { votes: 18, userVote: 1 };
+  setPostVote.mock.mockImplementation(async () => response);
+
+  const result = await votePostService(41, 7, { value: 1 });
+
+  assert.strictEqual(result, response);
+  assert.deepEqual(result, { votes: 18, userVote: 1 });
+  assertLookup(41);
+  assertVoteWrite(41, 7, 1);
+});
+
+test('votePostService forwards a downvote and preserves a negative vote count', { concurrency: false }, async () => {
+  const response: PostVoteResponse = { votes: -3, userVote: -1 };
+  setPostVote.mock.mockImplementation(async () => response);
+
+  const result = await votePostService(52, 8, { value: -1 });
+
+  assert.strictEqual(result, response);
+  assert.deepEqual(result, { votes: -3, userVote: -1 });
+  assertLookup(52);
+  assertVoteWrite(52, 8, -1);
+});
+
+test('votePostService forwards a zero vote without treating zero counts as missing', { concurrency: false }, async () => {
+  const response: PostVoteResponse = { votes: 0, userVote: 0 };
+  setPostVote.mock.mockImplementation(async () => response);
+
+  const result = await votePostService(63, 9, { value: 0 });
+
+  assert.strictEqual(result, response);
+  assert.deepEqual(result, { votes: 0, userVote: 0 });
+  assertLookup(63);
+  assertVoteWrite(63, 9, 0);
+});
+
+test('votePostService rejects a missing post without attempting to write a vote', { concurrency: false }, async () => {
+  getByIdPost.mock.mockImplementation(async () => null);
+
+  await assert.rejects(
+    votePostService(74, 10, { value: 1 }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    ),
+  );
+
+  assertLookup(74);
+  assert.equal(setPostVote.mock.callCount(), 0);
+});
+
+test('votePostService reports not found when the vote write returns no result', { concurrency: false }, async () => {
+  setPostVote.mock.mockImplementation(async () => null);
+
+  await assert.rejects(
+    votePostService(85, 11, { value: -1 }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    ),
+  );
+
+  assertLookup(85);
+  assertVoteWrite(85, 11, -1);
+});
+
+test('votePostService propagates lookup failures without writing a vote', { concurrency: false }, async () => {
+  const failure = new Error('Post lookup failed');
+  getByIdPost.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    votePostService(96, 12, { value: 1 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertLookup(96);
+  assert.equal(setPostVote.mock.callCount(), 0);
+});
+
+test('votePostService propagates vote persistence failures without retrying', { concurrency: false }, async () => {
+  const failure = new Error('Vote persistence failed');
+  setPostVote.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    votePostService(107, 13, { value: 0 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertLookup(107);
+  assertVoteWrite(107, 13, 0);
+});
+
+test('votePostService waits for post existence to be confirmed before writing', { concurrency: false }, async () => {
+  let resolveLookup!: (post: { id: number } | null) => void;
+  const pendingLookup = new Promise<{ id: number } | null>((resolve) => {
+    resolveLookup = resolve;
+  });
+  getByIdPost.mock.mockImplementation(() => pendingLookup);
+
+  const response: PostVoteResponse = { votes: 6, userVote: 1 };
+  setPostVote.mock.mockImplementation(async () => response);
+
+  const pendingVote = votePostService(118, 14, { value: 1 });
+
+  try {
+    await Promise.resolve();
+    assertLookup(118);
+    assert.equal(setPostVote.mock.callCount(), 0);
+  } finally {
+    resolveLookup({ id: 118 });
+  }
+
+  const result = await pendingVote;
+
+  assert.strictEqual(result, response);
+  assertLookup(118);
+  assertVoteWrite(118, 14, 1);
+});

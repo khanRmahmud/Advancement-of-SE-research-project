@@ -1,0 +1,28 @@
+# Python environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+
+# Node.js dependencies
+node_modules/
+
+# Temporary mutation-testing files
+.stryker-tmp/
+.research-mutation-build/
+.research-mutation-input/
+
+# Local logs
+local-logs/
+*.log
+
+# Editor files
+.vscode/
+.DS_Store
+Thumbs.db

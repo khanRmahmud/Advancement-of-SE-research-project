@@ -1,0 +1,15 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+comments,voteCommentService,src/comments/comments.services.ts,0,BlockStatement,161,33,181,2,{},Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,1,ConditionalExpression,163,7,163,36,true,Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,2,ConditionalExpression,163,7,163,36,false,Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,3,EqualityOperator,163,7,163,36,result.status !== 'not_found',Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,4,StringLiteral,163,25,163,36,"""""",Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,5,BlockStatement,163,38,169,4,{},Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,7,StringLiteral,167,7,167,27,"""""",Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,8,ConditionalExpression,170,7,170,34,true,Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,9,ConditionalExpression,170,7,170,34,false,Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,10,EqualityOperator,170,7,170,34,result.status !== 'deleted',Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,11,StringLiteral,170,25,170,34,"""""",Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,12,BlockStatement,170,36,176,4,{},Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,14,StringLiteral,174,7,174,46,"""""",Killed,Killed
+comments,voteCommentService,src/comments/comments.services.ts,15,ObjectLiteral,177,10,180,4,{},Killed,Killed

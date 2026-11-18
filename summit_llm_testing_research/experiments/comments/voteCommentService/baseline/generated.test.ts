@@ -1,0 +1,186 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+type VoteResult =
+  | { status: 'ok'; votes: number; userVote: -1 | 0 | 1 }
+  | { status: 'not_found' }
+  | { status: 'deleted' };
+
+const setCommentVote = mock.fn(
+  async (
+    _commentId: number,
+    _userId: number,
+    _value: number,
+  ): Promise<VoteResult> => {
+    throw new Error('Unexpected setCommentVote call');
+  },
+);
+
+const unexpectedDependency = mock.fn((): never => {
+  throw new Error('voteCommentService called an unrelated dependency');
+});
+
+// Run with Node.js's --experimental-test-module-mocks flag.
+mock.module('./comments.repositories.js', {
+  namedExports: {
+    createComment: unexpectedDependency,
+    getByIdPost: unexpectedDependency,
+    getCommentsByPostId: unexpectedDependency,
+    getCommentById: unexpectedDependency,
+    getCommentVote: unexpectedDependency,
+    removeCommentById: unexpectedDependency,
+    setCommentVote,
+    updateCommentById: unexpectedDependency,
+  },
+});
+
+mock.module('./comments.mapper.js', {
+  namedExports: {
+    toCommentContract: unexpectedDependency,
+  },
+});
+
+const { voteCommentService } = await import('./comments.services.js');
+
+beforeEach(() => {
+  setCommentVote.mock.resetCalls();
+  unexpectedDependency.mock.resetCalls();
+  setCommentVote.mock.mockImplementation(async () => {
+    throw new Error('Unexpected setCommentVote call');
+  });
+});
+
+function assertRepositoryCall(
+  commentId: number,
+  userId: number,
+  value: number,
+): void {
+  assert.deepStrictEqual(
+    setCommentVote.mock.calls.map((call) => call.arguments),
+    [[commentId, userId, value]],
+  );
+  assert.equal(unexpectedDependency.mock.callCount(), 0);
+}
+
+test('voteCommentService forwards an upvote and returns only the public vote fields', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: 12,
+    userVote: 1,
+  }));
+
+  const result = await voteCommentService(41, 7, { value: 1 });
+
+  assert.deepStrictEqual(result, { votes: 12, userVote: 1 });
+  assertRepositoryCall(41, 7, 1);
+});
+
+test('voteCommentService forwards a downvote and preserves a negative total', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: -4,
+    userVote: -1,
+  }));
+
+  const result = await voteCommentService(52, 8, { value: -1 });
+
+  assert.deepStrictEqual(result, { votes: -4, userVote: -1 });
+  assertRepositoryCall(52, 8, -1);
+});
+
+test('voteCommentService forwards a neutral vote without dropping zero values', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: 0,
+    userVote: 0,
+  }));
+
+  const result = await voteCommentService(63, 9, { value: 0 });
+
+  assert.deepStrictEqual(result, { votes: 0, userVote: 0 });
+  assertRepositoryCall(63, 9, 0);
+});
+
+test('voteCommentService rejects with COMMENT_NOT_FOUND for a missing comment', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'not_found',
+  }));
+
+  await assert.rejects(
+    voteCommentService(74, 10, { value: 1 }),
+    new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMENT_NOT_FOUND,
+      'Comment not found.',
+    ),
+  );
+
+  assertRepositoryCall(74, 10, 1);
+});
+
+test('voteCommentService rejects with COMMENT_DELETED for a deleted comment', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'deleted',
+  }));
+
+  await assert.rejects(
+    voteCommentService(85, 11, { value: -1 }),
+    new AppError(
+      HttpStatus.CONFLICT,
+      ErrorCode.COMMENT_DELETED,
+      'You cannot vote on a deleted comment.',
+    ),
+  );
+
+  assertRepositoryCall(85, 11, -1);
+});
+
+test('voteCommentService propagates an asynchronous repository rejection unchanged', async () => {
+  const failure = new Error('Repository operation failed');
+  setCommentVote.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    voteCommentService(96, 12, { value: 1 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertRepositoryCall(96, 12, 1);
+});
+
+test('voteCommentService turns a synchronous repository exception into a rejection', async () => {
+  const failure = new Error('Repository threw synchronously');
+  setCommentVote.mock.mockImplementation(() => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    voteCommentService(107, 13, { value: 0 }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertRepositoryCall(107, 13, 0);
+});
+
+test('voteCommentService returns the repository vote state rather than echoing the requested value', async () => {
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: 7,
+    userVote: 0,
+  }));
+
+  const result = await voteCommentService(118, 14, { value: 1 });
+
+  assert.deepStrictEqual(result, { votes: 7, userVote: 0 });
+  assertRepositoryCall(118, 14, 1);
+});

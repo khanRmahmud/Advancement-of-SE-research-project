@@ -1,0 +1,76 @@
+TAP version 13
+# (node:13284) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:13284) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: an owner can save title and body changes and receive the mapped updated post
+ok 1 - an owner can save title and body changes and receive the mapped updated post
+  ---
+  duration_ms: 3.7803
+  type: 'test'
+  ...
+# Subtest: an empty update is passed through without checking a community
+ok 2 - an empty update is passed through without checking a community
+  ---
+  duration_ms: 0.4929
+  type: 'test'
+  ...
+# Subtest: a defined community ID of zero is validated before persisting
+ok 3 - a defined community ID of zero is validated before persisting
+  ---
+  duration_ms: 0.5702
+  type: 'test'
+  ...
+# Subtest: a missing post rejects with POST_NOT_FOUND before any community lookup or update
+ok 4 - a missing post rejects with POST_NOT_FOUND before any community lookup or update
+  ---
+  duration_ms: 1.015
+  type: 'test'
+  ...
+# Subtest: a non-owner cannot edit a post even when requesting a community change
+ok 5 - a non-owner cannot edit a post even when requesting a community change
+  ---
+  duration_ms: 1.6466
+  type: 'test'
+  ...
+# Subtest: a nonexistent destination community prevents saving an owner edit
+ok 6 - a nonexistent destination community prevents saving an owner edit
+  ---
+  duration_ms: 0.4527
+  type: 'test'
+  ...
+# Subtest: a post lookup failure is propagated unchanged without attempting an update
+ok 7 - a post lookup failure is propagated unchanged without attempting an update
+  ---
+  duration_ms: 2.3086
+  type: 'test'
+  ...
+# Subtest: a persistence failure is propagated unchanged and no response mapping occurs
+ok 8 - a persistence failure is propagated unchanged and no response mapping occurs
+  ---
+  duration_ms: 1.2931
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 288.0203
+# start of coverage report
+# ------------------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# ------------------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+#  posts             |        |          |         | 
+#   posts.service.ts |  48.34 |   100.00 |   25.00 | 40-66 69-73 76-82 85-94 97-110 137-151
+# ------------------------------------------------------------------------------------------
+# all files          |  60.00 |   100.00 |   50.00 | 
+# ------------------------------------------------------------------------------------------
+# end of coverage report

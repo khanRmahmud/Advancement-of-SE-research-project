@@ -1,0 +1,20 @@
+{
+  "protocol": "summit-main-study-mutation-v1",
+  "feature": "comments",
+  "target": "updateCommentService",
+  "arm": "baseline",
+  "source_file": "src/comments/comments.services.ts",
+  "source_sha256": "99656e99a91198a9b368328355b0a5e83d5332f0726651cb33cde051e91f7a58",
+  "original_generated_test_sha256": "d5b8fcfed1577ad414d7d60963d7026299df3555d7f4e5bcf36e625a760879d5",
+  "staged_generated_test_sha256": "d5b8fcfed1577ad414d7d60963d7026299df3555d7f4e5bcf36e625a760879d5",
+  "compiler_sha256": "5976048d1266598210427c5d5d1469a0cc7f00e1d92b31c02bd91419e07440bd",
+  "config_sha256": "a85924952268fbc62b0774f80dd1fb2f6b9f8bde4ee619633dd5c297cfea2922",
+  "mutation_scope": "exported_function_only",
+  "shared_helpers_in_mutation_scope": false,
+  "stryker_coverageAnalysis": "off",
+  "timestamp_utc": "2026-11-14T22:48:10.824846+00:00",
+  "original_generated_test_modified": false,
+  "exit_code": 0,
+  "status": "passed",
+  "finished_utc": "2026-11-14T22:48:30.416931+00:00"
+}

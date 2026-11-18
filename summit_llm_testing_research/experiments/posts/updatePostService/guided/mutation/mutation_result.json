@@ -1,0 +1,27 @@
+{
+  "protocol": "summit-main-study-mutation-v1",
+  "feature": "posts",
+  "target": "updatePostService",
+  "arm": "guided",
+  "source_file": "src/posts/posts.service.ts",
+  "source_sha256": "85b1a1ea0ff8bd754d2d01520ac2aaf1ec53c3931efd8150efcca1d37dd5f4e5",
+  "original_generated_test_sha256": "4dad8ab08cd69837e6174fbcb68ea455fda749e03ccb8f0fd99e90c3363632d1",
+  "staged_generated_test_sha256": "4dad8ab08cd69837e6174fbcb68ea455fda749e03ccb8f0fd99e90c3363632d1",
+  "compiler_sha256": "5976048d1266598210427c5d5d1469a0cc7f00e1d92b31c02bd91419e07440bd",
+  "config_sha256": "a85924952268fbc62b0774f80dd1fb2f6b9f8bde4ee619633dd5c297cfea2922",
+  "mutation_scope": "exported_function_only",
+  "shared_helpers_in_mutation_scope": false,
+  "stryker_coverageAnalysis": "off",
+  "timestamp_utc": "2026-11-14T22:43:40.530918+00:00",
+  "original_generated_test_modified": false,
+  "exit_code": 0,
+  "status": "passed",
+  "finished_utc": "2026-11-14T22:43:57.769352+00:00",
+  "source_sha256_after_mutation_run": "85b1a1ea0ff8bd754d2d01520ac2aaf1ec53c3931efd8150efcca1d37dd5f4e5",
+  "generated_test_sha256_after_mutation_run": "4dad8ab08cd69837e6174fbcb68ea455fda749e03ccb8f0fd99e90c3363632d1",
+  "inputs_unchanged_after_run": true,
+  "outcomes": {
+    "mutants_total": 16,
+    "Killed": 16
+  }
+}

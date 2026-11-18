@@ -1,0 +1,33 @@
+{
+  "protocol": "main-study-evaluation-v1",
+  "feature": "comments",
+  "target": "voteCommentService",
+  "method": "guided",
+  "generated_test_sha256": "ae03667af30b248e66e11ba4189943f9a656ece65a19064d37478e9605e2e90e",
+  "source_sha256": "99656e99a91198a9b368328355b0a5e83d5332f0726651cb33cde051e91f7a58",
+  "started_utc": "2026-11-14T22:51:48.132887+00:00",
+  "compilation": "passed",
+  "execution": "passed",
+  "node_exit_code": 0,
+  "tests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "coverage": {
+    "status": "module_level_only",
+    "covered_file": "src\\comments\\comments.services.ts",
+    "lh": 65,
+    "lf": 181,
+    "brh": 7,
+    "brf": 7,
+    "line_percent": 35.91,
+    "branch_percent": 100.0
+  },
+  "mutations": "not_run_in_this_step",
+  "original_test_edited": false,
+  "updated_utc": "2026-11-14T22:51:52.974162+00:00"
+}

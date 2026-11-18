@@ -1,0 +1,17 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+posts,updatePostService,src/posts/posts.service.ts,0,BlockStatement,116,32,134,2,{},Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,1,ConditionalExpression,118,7,118,39,true,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,2,ConditionalExpression,118,7,118,39,false,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,3,EqualityOperator,118,7,118,39,existingPost.authorId === userId,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,4,BlockStatement,118,41,124,4,{},Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,6,StringLiteral,122,7,122,45,"""""",Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,7,ConditionalExpression,125,7,125,37,true,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,8,ConditionalExpression,125,7,125,37,false,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,9,EqualityOperator,125,7,125,37,data.communityId === undefined,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,10,BlockStatement,125,39,129,4,{},Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,11,BooleanLiteral,127,9,127,19,community,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,12,ConditionalExpression,127,9,127,19,true,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,13,ConditionalExpression,127,9,127,19,false,Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,15,StringLiteral,128,31,128,52,"""""",Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,16,StringLiteral,128,54,128,76,"""""",Killed,Killed
+posts,updatePostService,src/posts/posts.service.ts,17,ObjectLiteral,131,10,133,4,{},Killed,Killed

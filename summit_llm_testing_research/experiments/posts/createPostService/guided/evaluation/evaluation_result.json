@@ -1,0 +1,33 @@
+{
+  "protocol": "main-study-evaluation-v1",
+  "feature": "posts",
+  "target": "createPostService",
+  "method": "guided",
+  "generated_test_sha256": "2345b828e18dc7007fb07833a71e80f9e8ce69389e072bc4b4f730767c1834ce",
+  "source_sha256": "85b1a1ea0ff8bd754d2d01520ac2aaf1ec53c3931efd8150efcca1d37dd5f4e5",
+  "started_utc": "2026-11-14T22:24:15.422327+00:00",
+  "compilation": "passed",
+  "execution": "passed",
+  "node_exit_code": 0,
+  "tests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "coverage": {
+    "status": "module_level_only",
+    "covered_file": "src\\posts\\posts.service.ts",
+    "lh": 66,
+    "lf": 151,
+    "brh": 6,
+    "brf": 6,
+    "line_percent": 43.71,
+    "branch_percent": 100.0
+  },
+  "mutations": "not_run_in_this_step",
+  "original_test_edited": false,
+  "updated_utc": "2026-11-14T22:24:21.100099+00:00"
+}

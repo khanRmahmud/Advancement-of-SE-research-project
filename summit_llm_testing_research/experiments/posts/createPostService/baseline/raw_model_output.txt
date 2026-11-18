@@ -1,0 +1,279 @@
+import test, { beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+// Run with Node.js's --experimental-test-module-mocks flag.
+type Behavior = {
+  lookup: (communityId: number) => Promise<unknown>;
+  insert: (...args: unknown[]) => Promise<unknown>;
+  map: (post: unknown) => unknown;
+};
+
+const community = Object.freeze({ id: 17 });
+const databasePost = Object.freeze({ id: 81, title: 'Stored title' });
+const mappedPost = Object.freeze({ id: 81, title: 'Mapped title' });
+
+let behavior: Behavior;
+
+const getCommunityById = mock.fn((communityId: number) =>
+  behavior.lookup(communityId),
+);
+const createPost = mock.fn((...args: unknown[]) => behavior.insert(...args));
+const toPostContract = mock.fn((post: unknown) => behavior.map(post));
+const unexpectedRepositoryCall = mock.fn((..._args: unknown[]): never => {
+  throw new Error('Unexpected repository operation');
+});
+
+mock.module('./posts.repositories.js', {
+  namedExports: {
+    createPost,
+    getCommunityById,
+    getAllPosts: unexpectedRepositoryCall,
+    getByIdPost: unexpectedRepositoryCall,
+    getPostVote: unexpectedRepositoryCall,
+    removePost: unexpectedRepositoryCall,
+    setPostVote: unexpectedRepositoryCall,
+    updatePost: unexpectedRepositoryCall,
+  },
+});
+
+mock.module('./posts.mapper.js', {
+  namedExports: { toPostContract },
+});
+
+const { createPostService } = await import('./posts.service.js');
+
+type CreatePostInput = Parameters<typeof createPostService>[0];
+
+function request(overrides: Partial<CreatePostInput> = {}): CreatePostInput {
+  return {
+    title: 'A new post',
+    body: 'Post content',
+    communityId: 17,
+    isAnonymous: false,
+    ...overrides,
+  };
+}
+
+function assertLookup(communityId: number): void {
+  assert.equal(getCommunityById.mock.callCount(), 1);
+  assert.deepEqual(getCommunityById.mock.calls[0]!.arguments, [communityId]);
+  assert.equal(unexpectedRepositoryCall.mock.callCount(), 0);
+}
+
+beforeEach(() => {
+  behavior = {
+    lookup: async () => community,
+    insert: async () => databasePost,
+    map: () => mappedPost,
+  };
+
+  getCommunityById.mock.resetCalls();
+  createPost.mock.resetCalls();
+  toPostContract.mock.resetCalls();
+  unexpectedRepositoryCall.mock.resetCalls();
+});
+
+test('creates a post with all photo metadata and returns the mapped repository result', async () => {
+  const data = request({
+    photoUrl: 'https://example.test/photo.png',
+    photoWidth: 640,
+    photoHeight: 480,
+  });
+
+  const result = await createPostService(data, 29);
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.deepEqual(createPost.mock.calls[0]!.arguments, [
+    data.title,
+    data.body,
+    29,
+    data.communityId,
+    {
+      photoUrl: data.photoUrl,
+      photoWidth: 640,
+      photoHeight: 480,
+    },
+    false,
+  ]);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.strictEqual(toPostContract.mock.calls[0]!.arguments[0], databasePost);
+  assert.deepEqual(result, { post: mappedPost });
+  assert.strictEqual(result.post, mappedPost);
+});
+
+test('forwards anonymous creation and explicitly undefined photo fields when photos are omitted', async () => {
+  const data = request({ isAnonymous: true });
+
+  const result = await createPostService(data, 43);
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.deepEqual(createPost.mock.calls[0]!.arguments, [
+    data.title,
+    data.body,
+    43,
+    data.communityId,
+    {
+      photoUrl: undefined,
+      photoWidth: undefined,
+      photoHeight: undefined,
+    },
+    true,
+  ]);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.strictEqual(toPostContract.mock.calls[0]!.arguments[0], databasePost);
+  assert.deepEqual(result, { post: mappedPost });
+});
+
+test('preserves empty text and zero-valued photo dimensions without applying defaults', async () => {
+  const data = request({
+    title: '',
+    body: '',
+    photoUrl: '',
+    photoWidth: 0,
+    photoHeight: 0,
+  });
+
+  const result = await createPostService(data, 29);
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.deepEqual(createPost.mock.calls[0]!.arguments, [
+    '',
+    '',
+    29,
+    data.communityId,
+    { photoUrl: '', photoWidth: 0, photoHeight: 0 },
+    false,
+  ]);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.deepEqual(result, { post: mappedPost });
+});
+
+test('rejects a missing community with COMMUNITY_NOT_FOUND and does not insert or map a post', async () => {
+  behavior.lookup = async () => null;
+  const data = request();
+
+  await assert.rejects(createPostService(data, 29), (error: unknown) => {
+    assert.ok(error instanceof AppError);
+    assert.equal(error.message, 'Community not found.');
+    assert.deepEqual(
+      error,
+      new AppError(
+        HttpStatus.NOT_FOUND,
+        ErrorCode.COMMUNITY_NOT_FOUND,
+        'Community not found.',
+      ),
+    );
+    return true;
+  });
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 0);
+  assert.equal(toPostContract.mock.callCount(), 0);
+});
+
+test('propagates a community lookup failure without attempting insertion or mapping', async () => {
+  const failure = new Error('Community lookup failed');
+  behavior.lookup = async () => {
+    throw failure;
+  };
+  const data = request();
+
+  await assert.rejects(createPostService(data, 29), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 0);
+  assert.equal(toPostContract.mock.callCount(), 0);
+});
+
+test('propagates an insertion failure without mapping a result or retrying insertion', async () => {
+  const failure = new Error('Post insertion failed');
+  behavior.insert = async () => {
+    throw failure;
+  };
+  const data = request();
+
+  await assert.rejects(createPostService(data, 29), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.deepEqual(createPost.mock.calls[0]!.arguments, [
+    data.title,
+    data.body,
+    29,
+    data.communityId,
+    {
+      photoUrl: undefined,
+      photoWidth: undefined,
+      photoHeight: undefined,
+    },
+    false,
+  ]);
+  assert.equal(toPostContract.mock.callCount(), 0);
+});
+
+test('propagates a mapper failure after successful insertion without inserting again', async () => {
+  const failure = new Error('Post mapping failed');
+  behavior.map = () => {
+    throw failure;
+  };
+  const data = request();
+
+  await assert.rejects(createPostService(data, 29), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.strictEqual(toPostContract.mock.calls[0]!.arguments[0], databasePost);
+});
+
+test('waits for community lookup before insertion and for insertion before mapping', async () => {
+  let resolveLookup!: (value: unknown) => void;
+  let resolveInsert!: (value: unknown) => void;
+
+  const lookupPending = new Promise<unknown>((resolve) => {
+    resolveLookup = resolve;
+  });
+  const insertPending = new Promise<unknown>((resolve) => {
+    resolveInsert = resolve;
+  });
+
+  behavior.lookup = () => lookupPending;
+  behavior.insert = () => insertPending;
+
+  const data = request();
+  const pendingResult = createPostService(data, 29);
+
+  assertLookup(data.communityId);
+  assert.equal(createPost.mock.callCount(), 0);
+  assert.equal(toPostContract.mock.callCount(), 0);
+
+  resolveLookup(community);
+  await Promise.resolve();
+
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.equal(toPostContract.mock.callCount(), 0);
+
+  resolveInsert(databasePost);
+  const result = await pendingResult;
+
+  assert.equal(createPost.mock.callCount(), 1);
+  assert.equal(toPostContract.mock.callCount(), 1);
+  assert.strictEqual(toPostContract.mock.calls[0]!.arguments[0], databasePost);
+  assert.deepEqual(result, { post: mappedPost });
+  assert.equal(unexpectedRepositoryCall.mock.callCount(), 0);
+});

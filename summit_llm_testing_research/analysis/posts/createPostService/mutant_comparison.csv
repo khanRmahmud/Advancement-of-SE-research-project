@@ -1,0 +1,9 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+posts,createPostService,src/posts/posts.service.ts,0,BlockStatement,42,32,66,2,{},Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,1,BooleanLiteral,44,7,44,17,community,Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,2,ConditionalExpression,44,7,44,17,true,Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,3,ConditionalExpression,44,7,44,17,false,Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,4,BlockStatement,44,19,50,4,{},Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,6,StringLiteral,48,7,48,29,"""""",Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,7,ObjectLiteral,56,5,60,6,{},Killed,Killed
+posts,createPostService,src/posts/posts.service.ts,8,ObjectLiteral,63,10,65,4,{},Killed,Killed

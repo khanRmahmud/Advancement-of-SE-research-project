@@ -1,0 +1,76 @@
+TAP version 13
+# (node:23228) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:23228) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: returns an empty communities array when the user has no memberships
+ok 1 - returns an empty communities array when the user has no memberships
+  ---
+  duration_ms: 14.8111
+  type: 'test'
+  ...
+# Subtest: maps a joined community and returns the mapper output rather than the database row
+ok 2 - maps a joined community and returns the mapper output rather than the database row
+  ---
+  duration_ms: 1.5332
+  type: 'test'
+  ...
+# Subtest: maps every joined community in repository order without modifying the source array
+ok 3 - maps every joined community in repository order without modifying the source array
+  ---
+  duration_ms: 2.0528
+  type: 'test'
+  ...
+# Subtest: forwards a zero user ID to the repository without service-level validation
+ok 4 - forwards a zero user ID to the repository without service-level validation
+  ---
+  duration_ms: 1.1813
+  type: 'test'
+  ...
+# Subtest: preserves duplicate repository entries and maps each occurrence
+ok 5 - preserves duplicate repository entries and maps each occurrence
+  ---
+  duration_ms: 1.8866
+  type: 'test'
+  ...
+# Subtest: propagates repository rejection unchanged and does not invoke the mapper
+ok 6 - propagates repository rejection unchanged and does not invoke the mapper
+  ---
+  duration_ms: 2.1949
+  type: 'test'
+  ...
+# Subtest: propagates a mapper error unchanged and stops mapping subsequent rows
+ok 7 - propagates a mapper error unchanged and stops mapping subsequent rows
+  ---
+  duration_ms: 0.895
+  type: 'test'
+  ...
+# Subtest: waits for the repository promise before mapping its resolved communities
+ok 8 - waits for the repository promise before mapping its resolved communities
+  ---
+  duration_ms: 1.3474
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 438.7857
+# start of coverage report
+# -----------------------------------------------------------------------------------------------------------------
+# file                      | line % | branch % | funcs % | uncovered lines
+# -----------------------------------------------------------------------------------------------------------------
+# src                       |        |          |         | 
+#  communities              |        |          |         | 
+#   communities.services.ts |  38.64 |   100.00 |   11.11 | 35-49 52-76 79-84 87-94 97-106 109-128 134-145 151-162
+#  errors                   |        |          |         | 
+#   app.error.ts            |  30.00 |    50.00 |    0.00 | 3-9
+#   error-code.ts           |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts          |  92.86 |   100.00 |  100.00 | 14
+# -----------------------------------------------------------------------------------------------------------------
+# all files                 |  48.00 |    88.89 |   23.08 | 
+# -----------------------------------------------------------------------------------------------------------------
+# end of coverage report

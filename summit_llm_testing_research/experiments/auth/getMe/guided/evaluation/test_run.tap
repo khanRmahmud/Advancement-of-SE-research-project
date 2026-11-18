@@ -1,0 +1,77 @@
+TAP version 13
+# (node:21092) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:21092) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# (node:21092) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+# Subtest: getMe returns the mapped account in a user-only response envelope
+ok 1 - getMe returns the mapped account in a user-only response envelope
+  ---
+  duration_ms: 6.085
+  type: 'test'
+  ...
+# Subtest: getMe does not reject an existing account merely because its email is unverified
+ok 2 - getMe does not reject an existing account merely because its email is unverified
+  ---
+  duration_ms: 0.5227
+  type: 'test'
+  ...
+# Subtest: getMe reports USER_NOT_FOUND when the repository finds no account
+ok 3 - getMe reports USER_NOT_FOUND when the repository finds no account
+  ---
+  duration_ms: 1.3628
+  type: 'test'
+  ...
+# Subtest: getMe forwards a zero identifier to the repository without substituting another identifier
+ok 4 - getMe forwards a zero identifier to the repository without substituting another identifier
+  ---
+  duration_ms: 0.4427
+  type: 'test'
+  ...
+# Subtest: getMe propagates a repository rejection without mapping or wrapping it
+ok 5 - getMe propagates a repository rejection without mapping or wrapping it
+  ---
+  duration_ms: 0.4418
+  type: 'test'
+  ...
+# Subtest: getMe propagates a mapper error after a successful lookup
+ok 6 - getMe propagates a mapper error after a successful lookup
+  ---
+  duration_ms: 0.4953
+  type: 'test'
+  ...
+# Subtest: getMe waits for the repository result before invoking the mapper
+ok 7 - getMe waits for the repository result before invoking the mapper
+  ---
+  duration_ms: 0.4259
+  type: 'test'
+  ...
+# Subtest: getMe performs a fresh lookup and mapping on repeated requests for the same account
+ok 8 - getMe performs a fresh lookup and mapping on repeated requests for the same account
+  ---
+  duration_ms: 0.5735
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 259.9693
+# start of coverage report
+# --------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# --------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  auth              |        |          |         | 
+#   auth.services.ts |  30.86 |   100.00 |   20.00 | 35-68 85-117 120-147 150-175
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+# --------------------------------------------------------------------------------
+# all files          |  45.09 |   100.00 |   55.56 | 
+# --------------------------------------------------------------------------------
+# end of coverage report

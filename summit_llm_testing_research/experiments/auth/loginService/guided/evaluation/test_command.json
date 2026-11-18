@@ -1,0 +1,12 @@
+[
+  "node",
+  "--enable-source-maps",
+  "--experimental-test-module-mocks",
+  "--experimental-test-coverage",
+  "--test",
+  "--test-reporter=tap",
+  "--test-reporter-destination=C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\auth\\loginService\\guided\\evaluation\\test_run.tap",
+  "--test-reporter=lcov",
+  "--test-reporter-destination=C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\auth\\loginService\\guided\\evaluation\\coverage.lcov",
+  "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\.research-evaluation\\loginService\\guided\\dist\\auth\\__research_loginService_guided.test.js"
+]

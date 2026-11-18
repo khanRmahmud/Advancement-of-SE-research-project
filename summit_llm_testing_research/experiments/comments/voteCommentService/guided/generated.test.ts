@@ -1,0 +1,215 @@
+import test, { mock, type TestContext } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+
+const setCommentVote = mock.fn(
+  async (..._args: unknown[]): Promise<unknown> => {
+    throw new Error('Unexpected setCommentVote call');
+  },
+);
+
+const unexpectedDependency = mock.fn((..._args: unknown[]): never => {
+  throw new Error('Unexpected dependency call');
+});
+
+// Run with Node.js's --experimental-test-module-mocks flag.
+mock.module('./comments.repositories.js', {
+  namedExports: {
+    createComment: unexpectedDependency,
+    getByIdPost: unexpectedDependency,
+    getCommentsByPostId: unexpectedDependency,
+    getCommentById: unexpectedDependency,
+    getCommentVote: unexpectedDependency,
+    removeCommentById: unexpectedDependency,
+    setCommentVote,
+    updateCommentById: unexpectedDependency,
+  },
+});
+
+mock.module('./comments.mapper.js', {
+  namedExports: {
+    toCommentContract: unexpectedDependency,
+  },
+});
+
+const { voteCommentService } = await import('./comments.services.js');
+
+function prepare(
+  t: TestContext,
+  commentId: number,
+  userId: number,
+  value: -1 | 1,
+): void {
+  setCommentVote.mock.resetCalls();
+  unexpectedDependency.mock.resetCalls();
+  setCommentVote.mock.mockImplementation(async () => {
+    throw new Error('Test must configure setCommentVote');
+  });
+
+  t.after(() => {
+    assert.equal(setCommentVote.mock.callCount(), 1);
+    assert.deepEqual(setCommentVote.mock.calls[0]?.arguments, [
+      commentId,
+      userId,
+      value,
+    ]);
+    assert.equal(unexpectedDependency.mock.callCount(), 0);
+  });
+}
+
+test('voteCommentService forwards an upvote and returns only the response fields', async (t) => {
+  prepare(t, 41, 92, 1);
+  const repositoryResult = {
+    status: 'ok',
+    votes: 7,
+    userVote: 1,
+    internalMetadata: 'must not escape the service',
+  };
+  setCommentVote.mock.mockImplementation(async () => repositoryResult);
+
+  const result = await voteCommentService(41, 92, { value: 1 });
+
+  assert.deepEqual(result, { votes: 7, userVote: 1 });
+  assert.notStrictEqual(result, repositoryResult);
+});
+
+test('voteCommentService forwards a downvote and preserves a negative score', async (t) => {
+  prepare(t, 83, 17, -1);
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: -12,
+    userVote: -1,
+  }));
+
+  const result = await voteCommentService(83, 17, { value: -1 });
+
+  assert.deepEqual(result, { votes: -12, userVote: -1 });
+});
+
+test('voteCommentService preserves a zero aggregate score instead of treating it as missing', async (t) => {
+  prepare(t, 105, 28, 1);
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'ok',
+    votes: 0,
+    userVote: 1,
+  }));
+
+  const result = await voteCommentService(105, 28, { value: 1 });
+
+  assert.deepEqual(result, { votes: 0, userVote: 1 });
+});
+
+test('voteCommentService rejects with the comment-not-found application error', async (t) => {
+  prepare(t, 404, 31, 1);
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'not_found',
+  }));
+
+  await assert.rejects(
+    () => voteCommentService(404, 31, { value: 1 }),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.deepEqual(
+        error,
+        new AppError(
+          HttpStatus.NOT_FOUND,
+          ErrorCode.COMMENT_NOT_FOUND,
+          'Comment not found.',
+        ),
+      );
+      return true;
+    },
+  );
+});
+
+test('voteCommentService rejects voting on a deleted comment with the conflict application error', async (t) => {
+  prepare(t, 205, 32, -1);
+  setCommentVote.mock.mockImplementation(async () => ({
+    status: 'deleted',
+  }));
+
+  await assert.rejects(
+    () => voteCommentService(205, 32, { value: -1 }),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.deepEqual(
+        error,
+        new AppError(
+          HttpStatus.CONFLICT,
+          ErrorCode.COMMENT_DELETED,
+          'You cannot vote on a deleted comment.',
+        ),
+      );
+      return true;
+    },
+  );
+});
+
+test('voteCommentService propagates an asynchronous repository rejection unchanged', async (t) => {
+  prepare(t, 306, 33, 1);
+  const repositoryError = new Error('Repository operation failed');
+  setCommentVote.mock.mockImplementation(async () => {
+    throw repositoryError;
+  });
+
+  await assert.rejects(
+    () => voteCommentService(306, 33, { value: 1 }),
+    (error: unknown) => {
+      assert.strictEqual(error, repositoryError);
+      return true;
+    },
+  );
+});
+
+test('voteCommentService converts a synchronous repository throw into a rejection without replacing the error', async (t) => {
+  prepare(t, 407, 34, -1);
+  const repositoryError = new TypeError('Repository invocation failed');
+  setCommentVote.mock.mockImplementation(() => {
+    throw repositoryError;
+  });
+
+  let operation!: ReturnType<typeof voteCommentService>;
+  assert.doesNotThrow(() => {
+    operation = voteCommentService(407, 34, { value: -1 });
+  });
+
+  await assert.rejects(operation, (error: unknown) => {
+    assert.strictEqual(error, repositoryError);
+    return true;
+  });
+});
+
+test('voteCommentService waits for the repository before returning the persisted vote', async (t) => {
+  prepare(t, 508, 35, 1);
+
+  let resolveRepository!: (value: unknown) => void;
+  const pendingRepositoryResult = new Promise<unknown>((resolve) => {
+    resolveRepository = resolve;
+  });
+  setCommentVote.mock.mockImplementation(() => pendingRepositoryResult);
+
+  let settled = false;
+  const operation = voteCommentService(508, 35, { value: 1 });
+  const observedOperation = operation.then(
+    (result) => {
+      settled = true;
+      return result;
+    },
+    (error: unknown) => {
+      settled = true;
+      throw error;
+    },
+  );
+
+  await Promise.resolve();
+  const settledBeforeRepository = settled;
+
+  resolveRepository({ status: 'ok', votes: 19, userVote: 1 });
+  const result = await observedOperation;
+
+  assert.equal(settledBeforeRepository, false);
+  assert.equal(settled, true);
+  assert.deepEqual(result, { votes: 19, userVote: 1 });
+});

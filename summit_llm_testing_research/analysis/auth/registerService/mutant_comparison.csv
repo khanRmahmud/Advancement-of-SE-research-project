@@ -1,0 +1,16 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+auth,registerService,src/auth/auth.services.ts,0,BlockStatement,86,30,117,2,{},Timeout,Killed
+auth,registerService,src/auth/auth.services.ts,1,MethodExpression,87,17,87,51,request.email.trim().toUpperCase(),Killed,Killed
+auth,registerService,src/auth/auth.services.ts,2,MethodExpression,87,17,87,37,request.email,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,3,MethodExpression,88,20,88,43,request.username,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,4,ConditionalExpression,90,7,90,20,true,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,5,ConditionalExpression,90,7,90,20,false,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,6,BlockStatement,90,22,96,4,{},Killed,Killed
+auth,registerService,src/auth/auth.services.ts,8,StringLiteral,94,7,94,34,"""""",Killed,Killed
+auth,registerService,src/auth/auth.services.ts,9,ConditionalExpression,98,7,98,23,true,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,10,ConditionalExpression,98,7,98,23,false,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,11,BlockStatement,98,25,104,4,{},Killed,Killed
+auth,registerService,src/auth/auth.services.ts,13,StringLiteral,102,7,102,32,"""""",Killed,Killed
+auth,registerService,src/auth/auth.services.ts,14,CallExpression,113,3,113,50,;,Killed,Killed
+auth,registerService,src/auth/auth.services.ts,15,ObjectLiteral,114,10,116,4,{},Killed,Killed
+auth,registerService,src/auth/auth.services.ts,16,StringLiteral,115,14,115,77,"""""",Killed,Killed

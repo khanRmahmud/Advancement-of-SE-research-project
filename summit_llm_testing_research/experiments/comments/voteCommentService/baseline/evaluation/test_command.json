@@ -1,0 +1,12 @@
+[
+  "node",
+  "--enable-source-maps",
+  "--experimental-test-module-mocks",
+  "--experimental-test-coverage",
+  "--test",
+  "--test-reporter=tap",
+  "--test-reporter-destination=C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\comments\\voteCommentService\\baseline\\evaluation\\test_run.tap",
+  "--test-reporter=lcov",
+  "--test-reporter-destination=C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\comments\\voteCommentService\\baseline\\evaluation\\coverage.lcov",
+  "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\.research-evaluation\\voteCommentService\\baseline\\dist\\comments\\__research_voteCommentService_baseline.test.js"
+]

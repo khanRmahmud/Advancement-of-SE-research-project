@@ -1,0 +1,358 @@
+import test, { mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+
+function createHarness() {
+  return {
+    findByEmail: mock.fn(async (..._args: unknown[]): Promise<unknown> => null),
+    findByUsername: mock.fn(async (..._args: unknown[]): Promise<unknown> => null),
+    hash: mock.fn(async (..._args: unknown[]): Promise<string> => 'password-hash'),
+    createVerificationCode: mock.fn((..._args: unknown[]) => ({
+      code: '012345',
+      codeHash: 'verification-code-hash',
+    })),
+    createUnverifiedUser: mock.fn(
+      async (..._args: unknown[]): Promise<void> => {},
+    ),
+    sendVerificationCode: mock.fn((..._args: unknown[]): void => {}),
+  };
+}
+
+type Harness = ReturnType<typeof createHarness>;
+let dependencies = createHarness();
+
+function delegate(name: keyof Harness) {
+  return (...args: unknown[]) => dependencies[name](...args);
+}
+
+function unexpectedDependency(..._args: unknown[]): never {
+  throw new Error('registerService called an unrelated dependency');
+}
+
+mock.module('./auth.repositories.js', {
+  namedExports: {
+    findByEmail: delegate('findByEmail'),
+    findByUsername: delegate('findByUsername'),
+    createUnverifiedUser: delegate('createUnverifiedUser'),
+    findById: unexpectedDependency,
+    savePasswordResetCode: unexpectedDependency,
+    consumePasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('argon2', {
+  defaultExport: {
+    hash: delegate('hash'),
+    verify: unexpectedDependency,
+  },
+});
+
+mock.module('./verification/verification.code.js', {
+  namedExports: {
+    createVerificationCode: delegate('createVerificationCode'),
+  },
+});
+
+mock.module('./verification/verification.console.js', {
+  namedExports: {
+    sendVerificationCode: delegate('sendVerificationCode'),
+  },
+});
+
+mock.module('./auth.mappers.js', {
+  namedExports: { toUserContract: unexpectedDependency },
+});
+
+mock.module('./auth.token.js', {
+  namedExports: { createToken: unexpectedDependency },
+});
+
+mock.module('./password-reset/password-reset.code.js', {
+  namedExports: {
+    createPasswordResetCode: unexpectedDependency,
+    hashPasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('./password-reset/password-reset.console.js', {
+  namedExports: { sendPasswordResetCode: unexpectedDependency },
+});
+
+const { registerService } = await import('./auth.services.js');
+
+const request = {
+  email: 'alice@example.com',
+  username: 'Alice',
+  password: 'A-secure-password!',
+};
+
+const successResponse = {
+  message: 'Registration successful. Verify your email before logging in.',
+};
+
+function assertCallCounts(
+  expected: Partial<Record<keyof Harness, number>>,
+): void {
+  for (const key of Object.keys(dependencies) as Array<keyof Harness>) {
+    assert.equal(
+      dependencies[key].mock.callCount(),
+      expected[key] ?? 0,
+      `${key} call count`,
+    );
+  }
+}
+
+test('registerService persists the hashed credentials before sending the verification code', { concurrency: false }, async () => {
+  dependencies = createHarness();
+
+  let releasePersistence!: () => void;
+  let signalPersistenceStarted!: () => void;
+  const persistenceGate = new Promise<void>((resolve) => {
+    releasePersistence = resolve;
+  });
+  const persistenceStarted = new Promise<void>((resolve) => {
+    signalPersistenceStarted = resolve;
+  });
+
+  dependencies.createUnverifiedUser.mock.mockImplementation(async () => {
+    signalPersistenceStarted();
+    await persistenceGate;
+  });
+
+  const registration = registerService({ ...request });
+  await persistenceStarted;
+
+  assert.equal(dependencies.sendVerificationCode.mock.callCount(), 0);
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls[0]!.arguments,
+    [request.email],
+  );
+  assert.deepEqual(
+    dependencies.findByUsername.mock.calls[0]!.arguments,
+    [request.username],
+  );
+  assert.deepEqual(dependencies.hash.mock.calls[0]!.arguments, [request.password]);
+  assert.deepEqual(
+    dependencies.createVerificationCode.mock.calls[0]!.arguments,
+    [request.email],
+  );
+  assert.deepEqual(
+    dependencies.createUnverifiedUser.mock.calls[0]!.arguments,
+    [
+      request.email,
+      request.username,
+      'password-hash',
+      'verification-code-hash',
+    ],
+  );
+
+  releasePersistence();
+  assert.deepEqual(await registration, successResponse);
+  assert.deepEqual(
+    dependencies.sendVerificationCode.mock.calls[0]!.arguments,
+    [request.email, '012345'],
+  );
+  assertCallCounts({
+    findByEmail: 1,
+    findByUsername: 1,
+    hash: 1,
+    createVerificationCode: 1,
+    createUnverifiedUser: 1,
+    sendVerificationCode: 1,
+  });
+});
+
+test('registerService trims and lowercases email while preserving username case, internal spaces, and password whitespace', { concurrency: false }, async () => {
+  dependencies = createHarness();
+
+  const password = '  Secret Password!  ';
+  const result = await registerService({
+    email: '\t ALICE@Example.COM \n',
+    username: '\t Alice Smith \n',
+    password,
+  });
+
+  assert.deepEqual(result, successResponse);
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls[0]!.arguments,
+    ['alice@example.com'],
+  );
+  assert.deepEqual(
+    dependencies.findByUsername.mock.calls[0]!.arguments,
+    ['Alice Smith'],
+  );
+  assert.deepEqual(dependencies.hash.mock.calls[0]!.arguments, [password]);
+  assert.deepEqual(
+    dependencies.createVerificationCode.mock.calls[0]!.arguments,
+    ['alice@example.com'],
+  );
+  assert.deepEqual(
+    dependencies.createUnverifiedUser.mock.calls[0]!.arguments,
+    [
+      'alice@example.com',
+      'Alice Smith',
+      'password-hash',
+      'verification-code-hash',
+    ],
+  );
+  assert.deepEqual(
+    dependencies.sendVerificationCode.mock.calls[0]!.arguments,
+    ['alice@example.com', '012345'],
+  );
+  assertCallCounts({
+    findByEmail: 1,
+    findByUsername: 1,
+    hash: 1,
+    createVerificationCode: 1,
+    createUnverifiedUser: 1,
+    sendVerificationCode: 1,
+  });
+});
+
+test('registerService rejects an existing email before checking the username or creating credentials', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  dependencies.findByEmail.mock.mockImplementation(async () => ({ id: 1 }));
+
+  await assert.rejects(
+    registerService({ ...request, email: ' ALICE@EXAMPLE.COM ' }),
+    new AppError(
+      HttpStatus.CONFLICT,
+      ErrorCode.EMAIL_TAKEN,
+      'Email already registered.',
+    ),
+  );
+
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls[0]!.arguments,
+    ['alice@example.com'],
+  );
+  assertCallCounts({ findByEmail: 1 });
+});
+
+test('registerService rejects an existing username without hashing or creating a user', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  dependencies.findByUsername.mock.mockImplementation(async () => ({ id: 2 }));
+
+  await assert.rejects(
+    registerService({ ...request, username: ' Alice ' }),
+    new AppError(
+      HttpStatus.CONFLICT,
+      ErrorCode.USERNAME_TAKEN,
+      'Username already taken.',
+    ),
+  );
+
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls[0]!.arguments,
+    [request.email],
+  );
+  assert.deepEqual(
+    dependencies.findByUsername.mock.calls[0]!.arguments,
+    ['Alice'],
+  );
+  assertCallCounts({ findByEmail: 1, findByUsername: 1 });
+});
+
+test('registerService propagates an email lookup failure without continuing registration', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  const failure = new Error('Email lookup failed');
+  dependencies.findByEmail.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService({ ...request }), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.deepEqual(
+    dependencies.findByEmail.mock.calls[0]!.arguments,
+    [request.email],
+  );
+  assertCallCounts({ findByEmail: 1 });
+});
+
+test('registerService propagates password hashing failures without generating or sending a verification code', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  const failure = new Error('Password hashing failed');
+  dependencies.hash.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService({ ...request }), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.deepEqual(dependencies.hash.mock.calls[0]!.arguments, [request.password]);
+  assertCallCounts({
+    findByEmail: 1,
+    findByUsername: 1,
+    hash: 1,
+  });
+});
+
+test('registerService propagates user creation failures and does not send the verification code', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  const failure = new Error('User creation failed');
+  dependencies.createUnverifiedUser.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(registerService({ ...request }), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.deepEqual(
+    dependencies.createUnverifiedUser.mock.calls[0]!.arguments,
+    [
+      request.email,
+      request.username,
+      'password-hash',
+      'verification-code-hash',
+    ],
+  );
+  assertCallCounts({
+    findByEmail: 1,
+    findByUsername: 1,
+    hash: 1,
+    createVerificationCode: 1,
+    createUnverifiedUser: 1,
+  });
+});
+
+test('registerService propagates a synchronous verification delivery failure after creating the user', { concurrency: false }, async () => {
+  dependencies = createHarness();
+  const failure = new Error('Verification delivery failed');
+  let userCreated = false;
+
+  dependencies.createUnverifiedUser.mock.mockImplementation(async () => {
+    userCreated = true;
+  });
+  dependencies.sendVerificationCode.mock.mockImplementation(() => {
+    assert.equal(userCreated, true);
+    throw failure;
+  });
+
+  await assert.rejects(registerService({ ...request }), (error: unknown) => {
+    assert.strictEqual(error, failure);
+    return true;
+  });
+
+  assert.equal(userCreated, true);
+  assert.deepEqual(
+    dependencies.sendVerificationCode.mock.calls[0]!.arguments,
+    [request.email, '012345'],
+  );
+  assertCallCounts({
+    findByEmail: 1,
+    findByUsername: 1,
+    hash: 1,
+    createVerificationCode: 1,
+    createUnverifiedUser: 1,
+    sendVerificationCode: 1,
+  });
+});

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "auth",
+  "target_function": "registerService",
+  "source_file": "src/auth/auth.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "AUTH-REG-01",
+      "text": "A user can register an account using an email address, username, and password.",
+      "evidence": "Sprint 1 user story: sign-up with username/email/password."
+    },
+    {
+      "id": "AUTH-REG-02",
+      "text": "Account passwords must be stored securely rather than as plaintext.",
+      "evidence": "Product Backlog: authentication with secure password storage."
+    },
+    {
+      "id": "AUTH-REG-03",
+      "text": "Registration generates an account verification code; in the current deployment, this code is displayed in the backend/Docker server logs for manual use, not delivered by an email provider.",
+      "evidence": "Current user clarification about actual verification procedure; Sprint 1 user story documents verification flow."
+    }
+  ],
+  "evaluation_notes": [
+    "Verification is performed using a code shown in backend/Docker logs; no email provider is used.",
+    "Do not require sending a real email in generated unit tests. Mock the console-code sender."
+  ]
+}

@@ -1,0 +1,77 @@
+TAP version 13
+# (node:21560) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:21560) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# (node:21560) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+# Subtest: loginService returns the mapped user and an authentication token for a verified user
+ok 1 - loginService returns the mapped user and an authentication token for a verified user
+  ---
+  duration_ms: 3.4636
+  type: 'test'
+  ...
+# Subtest: loginService normalizes email casing and surrounding whitespace without altering the password
+ok 2 - loginService normalizes email casing and surrounding whitespace without altering the password
+  ---
+  duration_ms: 0.4057
+  type: 'test'
+  ...
+# Subtest: loginService rejects a missing user, including a whitespace-only email normalized to empty
+ok 3 - loginService rejects a missing user, including a whitespace-only email normalized to empty
+  ---
+  duration_ms: 1.1567
+  type: 'test'
+  ...
+# Subtest: loginService rejects an invalid password before checking whether the email is verified
+ok 4 - loginService rejects an invalid password before checking whether the email is verified
+  ---
+  duration_ms: 0.3898
+  type: 'test'
+  ...
+# Subtest: loginService denies an unverified user even when the password is valid
+ok 5 - loginService denies an unverified user even when the password is valid
+  ---
+  duration_ms: 0.3772
+  type: 'test'
+  ...
+# Subtest: loginService propagates repository failures without verifying a password or creating a session
+ok 6 - loginService propagates repository failures without verifying a password or creating a session
+  ---
+  duration_ms: 0.4692
+  type: 'test'
+  ...
+# Subtest: loginService propagates password-verifier failures without mapping a user or issuing a token
+ok 7 - loginService propagates password-verifier failures without mapping a user or issuing a token
+  ---
+  duration_ms: 0.3537
+  type: 'test'
+  ...
+# Subtest: loginService propagates token creation failures instead of returning a successful login
+ok 8 - loginService propagates token creation failures instead of returning a successful login
+  ---
+  duration_ms: 0.4463
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 231.6377
+# start of coverage report
+# --------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# --------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  auth              |        |          |         | 
+#   auth.services.ts |  43.43 |   100.00 |   20.00 | 71-82 85-117 120-147 150-175
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+# --------------------------------------------------------------------------------
+# all files          |  54.91 |   100.00 |   55.56 | 
+# --------------------------------------------------------------------------------
+# end of coverage report

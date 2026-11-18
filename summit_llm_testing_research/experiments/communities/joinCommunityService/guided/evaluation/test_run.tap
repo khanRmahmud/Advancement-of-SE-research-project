@@ -1,0 +1,76 @@
+TAP version 13
+# (node:20096) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:20096) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# Subtest: joins the resolved community and returns its joined membership status
+ok 1 - joins the resolved community and returns its joined membership status
+  ---
+  duration_ms: 2.9375
+  type: 'test'
+  ...
+# Subtest: rejects a missing community with the specified not-found error without joining
+ok 2 - rejects a missing community with the specified not-found error without joining
+  ---
+  duration_ms: 1.0361
+  type: 'test'
+  ...
+# Subtest: propagates a lookup failure unchanged and does not attempt membership creation
+ok 3 - propagates a lookup failure unchanged and does not attempt membership creation
+  ---
+  duration_ms: 0.438
+  type: 'test'
+  ...
+# Subtest: propagates a membership write failure unchanged instead of reporting joined status
+ok 4 - propagates a membership write failure unchanged instead of reporting joined status
+  ---
+  duration_ms: 0.4037
+  type: 'test'
+  ...
+# Subtest: waits for community lookup before attempting to join
+ok 5 - waits for community lookup before attempting to join
+  ---
+  duration_ms: 5.839
+  type: 'test'
+  ...
+# Subtest: does not report successful membership until the join operation completes
+ok 6 - does not report successful membership until the join operation completes
+  ---
+  duration_ms: 1.1628
+  type: 'test'
+  ...
+# Subtest: passes boundary inputs through to the repositories without substituting identifiers
+ok 7 - passes boundary inputs through to the repositories without substituting identifiers
+  ---
+  duration_ms: 0.5138
+  type: 'test'
+  ...
+# Subtest: creates a separate membership for each user joining the same community
+ok 8 - creates a separate membership for each user joining the same community
+  ---
+  duration_ms: 0.4223
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 157.3106
+# start of coverage report
+# -----------------------------------------------------------------------------------------------------------
+# file                      | line % | branch % | funcs % | uncovered lines
+# -----------------------------------------------------------------------------------------------------------
+# src                       |        |          |         | 
+#  communities              |        |          |         | 
+#   communities.services.ts |  49.43 |   100.00 |   22.22 | 52-76 79-84 87-94 97-106 109-128 151-162 169-176
+#  errors                   |        |          |         | 
+#   app.error.ts            | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts           |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts          |  92.86 |   100.00 |  100.00 | 14
+# -----------------------------------------------------------------------------------------------------------
+# all files                 |  59.56 |   100.00 |   46.15 | 
+# -----------------------------------------------------------------------------------------------------------
+# end of coverage report

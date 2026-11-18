@@ -1,0 +1,87 @@
+TAP version 13
+# (node:17192) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:17192) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# (node:17192) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+# Subtest: getMe returns only a user wrapper containing the mapper result
+ok 1 - getMe returns only a user wrapper containing the mapper result
+  ---
+  duration_ms: 7.3824
+  type: 'test'
+  ...
+# Subtest: getMe throws the specified not-found AppError when no user exists
+ok 2 - getMe throws the specified not-found AppError when no user exists
+  ---
+  duration_ms: 1.3247
+  type: 'test'
+  ...
+# Subtest: getMe forwards a zero user ID without applying its own validation
+ok 3 - getMe forwards a zero user ID without applying its own validation
+  ---
+  duration_ms: 0.4958
+  type: 'test'
+  ...
+# Subtest: getMe maps an unverified user rather than rejecting the account
+ok 4 - getMe maps an unverified user rather than rejecting the account
+  ---
+  duration_ms: 0.4677
+  type: 'test'
+  ...
+# Subtest: getMe waits for the repository lookup before invoking the mapper
+ok 5 - getMe waits for the repository lookup before invoking the mapper
+  ---
+  duration_ms: 0.6606
+  type: 'test'
+  ...
+# Subtest: getMe propagates repository rejection without invoking the mapper
+ok 6 - getMe propagates repository rejection without invoking the mapper
+  ---
+  duration_ms: 0.5709
+  type: 'test'
+  ...
+# Subtest: getMe propagates a mapper exception without replacing it
+ok 7 - getMe propagates a mapper exception without replacing it
+  ---
+  duration_ms: 0.4376
+  type: 'test'
+  ...
+# Subtest: getMe performs a fresh lookup and mapping on repeated calls for the same ID
+not ok 8 - getMe performs a fresh lookup and mapping on repeated calls for the same ID
+  ---
+  duration_ms: 3.7891
+  type: 'test'
+  location: 'C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\src\\auth\\__research_getMe_baseline.test.ts:226:1'
+  failureType: 'testCodeFailure'
+  error: 'User not found.'
+  code: 'USER_NOT_FOUND'
+  name: 'AppError'
+  stack: |-
+    getMe (C:\Users\Khan\Documents\summit_llm_testing_research\summit\app\server\src\auth\auth.services.ts:73:11)
+    async TestContext.<anonymous> (C:\Users\Khan\Documents\summit_llm_testing_research\summit\app\server\src\auth\__research_getMe_baseline.test.ts:238:24)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 336.9882
+# start of coverage report
+# --------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# --------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  auth              |        |          |         | 
+#   auth.services.ts |  30.86 |   100.00 |   20.00 | 35-68 85-117 120-147 150-175
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+# --------------------------------------------------------------------------------
+# all files          |  45.09 |   100.00 |   55.56 | 
+# --------------------------------------------------------------------------------
+# end of coverage report

@@ -1,0 +1,77 @@
+TAP version 13
+# (node:10468) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# (node:10468) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+# (node:10468) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+# Subtest: registerService persists the hashed credentials before sending the verification code
+ok 1 - registerService persists the hashed credentials before sending the verification code
+  ---
+  duration_ms: 2.9804
+  type: 'test'
+  ...
+# Subtest: registerService trims and lowercases email while preserving username case, internal spaces, and password whitespace
+ok 2 - registerService trims and lowercases email while preserving username case, internal spaces, and password whitespace
+  ---
+  duration_ms: 0.3773
+  type: 'test'
+  ...
+# Subtest: registerService rejects an existing email before checking the username or creating credentials
+ok 3 - registerService rejects an existing email before checking the username or creating credentials
+  ---
+  duration_ms: 0.8705
+  type: 'test'
+  ...
+# Subtest: registerService rejects an existing username without hashing or creating a user
+ok 4 - registerService rejects an existing username without hashing or creating a user
+  ---
+  duration_ms: 0.3153
+  type: 'test'
+  ...
+# Subtest: registerService propagates an email lookup failure without continuing registration
+ok 5 - registerService propagates an email lookup failure without continuing registration
+  ---
+  duration_ms: 0.3711
+  type: 'test'
+  ...
+# Subtest: registerService propagates password hashing failures without generating or sending a verification code
+ok 6 - registerService propagates password hashing failures without generating or sending a verification code
+  ---
+  duration_ms: 0.3158
+  type: 'test'
+  ...
+# Subtest: registerService propagates user creation failures and does not send the verification code
+ok 7 - registerService propagates user creation failures and does not send the verification code
+  ---
+  duration_ms: 0.3095
+  type: 'test'
+  ...
+# Subtest: registerService propagates a synchronous verification delivery failure after creating the user
+ok 8 - registerService propagates a synchronous verification delivery failure after creating the user
+  ---
+  duration_ms: 0.3621
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 276.5834
+# start of coverage report
+# -------------------------------------------------------------------------------
+# file               | line % | branch % | funcs % | uncovered lines
+# -------------------------------------------------------------------------------
+# src                |        |          |         | 
+#  auth              |        |          |         | 
+#   auth.services.ts |  42.86 |   100.00 |   20.00 | 35-68 71-82 120-147 150-175
+#  errors            |        |          |         | 
+#   app.error.ts     | 100.00 |   100.00 |  100.00 | 
+#   error-code.ts    |  96.00 |   100.00 |  100.00 | 25
+#   http-status.ts   |  92.86 |   100.00 |  100.00 | 14
+# -------------------------------------------------------------------------------
+# all files          |  54.46 |   100.00 |   55.56 | 
+# -------------------------------------------------------------------------------
+# end of coverage report

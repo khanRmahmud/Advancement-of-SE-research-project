@@ -1,0 +1,7 @@
+﻿feature,function,file,mutant_id,mutator,start_line,start_column,end_line,end_column,replacement,baseline_status,guided_status
+posts,votePostService,src/posts/posts.service.ts,0,BlockStatement,140,30,151,2,{},Killed,Killed
+posts,votePostService,src/posts/posts.service.ts,1,BooleanLiteral,143,7,143,14,result,Killed,Killed
+posts,votePostService,src/posts/posts.service.ts,2,ConditionalExpression,143,7,143,14,true,Killed,Killed
+posts,votePostService,src/posts/posts.service.ts,3,ConditionalExpression,143,7,143,14,false,Killed,Killed
+posts,votePostService,src/posts/posts.service.ts,4,BlockStatement,143,16,149,4,{},Killed,Killed
+posts,votePostService,src/posts/posts.service.ts,6,StringLiteral,147,7,147,24,"""""",Killed,Killed

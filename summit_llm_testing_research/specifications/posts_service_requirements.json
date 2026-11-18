@@ -1,0 +1,28 @@
+
+{
+  "project": "Summit",
+  "feature": "Post Management",
+  "source": "Summit Sprint 1, Sprint 2, and Sprint 3 user stories",
+  "target_module": "app/server/src/posts/posts.service.ts",
+  "description": "Expected behavior for creating, viewing, editing, deleting, and voting on posts.",
+
+  "requirements": [
+    "Users must be able to create and publish a post in a selected community with a title and body.",
+
+    "Users must be able to retrieve an existing post and view its content.",
+
+    "Users must be able to retrieve posts for display in the application feed.",
+
+    "A post owner must be able to edit their own post.",
+
+    "A user who does not own a post must not be allowed to edit that post.",
+
+    "A post owner must be able to delete their own post.",
+
+    "A user who does not own a post must not be allowed to delete that post.",
+
+    "Users must be able to vote on posts, and the post's vote information must reflect the voting operations.",
+
+    "When a post is published anonymously, its publicly returned post information must not expose the author's real username."
+  ]
+}

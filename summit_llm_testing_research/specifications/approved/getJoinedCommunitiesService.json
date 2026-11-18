@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "communities",
+  "target_function": "getJoinedCommunitiesService",
+  "source_file": "src/communities/communities.services.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "COMMUNITY-JOINED-01",
+      "text": "A signed-in user can view the communities they have joined.",
+      "evidence": "Sprint 2 user story: Your Communities list in sidebar using joined-community data from backend."
+    }
+  ],
+  "evaluation_notes": [
+    "Documented behavior is narrow; avoid padding requirements or forcing eight distinct meaningful test cases."
+  ]
+}

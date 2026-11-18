@@ -1,0 +1,13 @@
+﻿function,baseline_tests_passed,guided_tests_passed,baseline_kills,guided_kills,baseline_timeouts,guided_timeouts,baseline_mutation_score,guided_mutation_score
+createCommentService,8,8,2,2,0,0,100.0,100.0
+createPostService,8,8,8,8,0,0,100.0,100.0
+getAllCommunitiesService,8,8,2,2,0,0,100.0,100.0
+getJoinedCommunitiesService,8,8,2,2,0,0,100.0,100.0
+getMe,7,8,,7,,0,,100.0
+joinCommunityService,8,8,3,3,0,0,100.0,100.0
+loginService,8,8,19,19,0,0,100.0,100.0
+registerService,8,8,14,15,1,0,100.0,100.0
+updateCommentService,8,8,2,2,0,0,100.0,100.0
+updatePostService,8,8,16,16,0,0,100.0,100.0
+voteCommentService,8,8,14,14,0,0,100.0,100.0
+votePostService,8,8,6,6,0,0,100.0,100.0

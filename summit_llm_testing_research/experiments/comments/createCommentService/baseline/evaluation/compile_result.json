@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "target": "createCommentService",
+  "arm": "baseline",
+  "source_file": "src/comments/comments.services.ts",
+  "virtual_test_file": "src/comments/__research_createCommentService_baseline.test.ts",
+  "archived_test_file": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\experiments\\comments\\createCommentService\\baseline\\generated.test.ts",
+  "compiled_test_js": "C:\\Users\\Khan\\Documents\\summit_llm_testing_research\\summit\\app\\server\\.research-evaluation\\createCommentService\\baseline\\dist\\comments\\__research_createCommentService_baseline.test.js",
+  "typecheck_errors": 0,
+  "typescript_version": "6.0.2",
+  "excluded_preexisting_test_files": 3,
+  "original_test_modified": false
+}

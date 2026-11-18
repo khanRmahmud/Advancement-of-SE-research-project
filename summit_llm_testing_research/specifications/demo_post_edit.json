@@ -1,0 +1,14 @@
+{
+  "feature": "Post ownership authorization (illustrative unit)",
+  "requirements": [
+    "A signed-in user can edit a post if and only if the user's ID equals the post author's ID.",
+    "A user with a different ID must not be allowed to edit the post.",
+    "A user with no signed-in ID must not be allowed to edit the post."
+  ],
+  "edge_cases": [
+    "owner ID matches user ID",
+    "user ID differs from owner ID",
+    "user ID is null"
+  ],
+  "notes": "Illustrative function based on the supplied owner-only-edit user story, NOT Summit's verified implementation. Update this spec against actual app contracts."
+}

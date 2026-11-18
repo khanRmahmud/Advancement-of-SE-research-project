@@ -1,0 +1,253 @@
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, mock, test } from 'node:test';
+import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+
+const findById = mock.fn(async (_userId: number): Promise<unknown> => undefined);
+const toUserContract = mock.fn((_user: unknown): unknown => {
+  throw new Error('Unexpected mapper invocation');
+});
+const unexpectedDependency = mock.fn((..._args: unknown[]): never => {
+  throw new Error('getMe called an unrelated dependency');
+});
+
+mock.module('./auth.repositories.js', {
+  namedExports: {
+    findById,
+    findByEmail: unexpectedDependency,
+    findByUsername: unexpectedDependency,
+    consumePasswordResetCode: unexpectedDependency,
+    createUnverifiedUser: unexpectedDependency,
+    savePasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('./auth.mappers.js', {
+  namedExports: { toUserContract },
+});
+
+mock.module('./auth.token.js', {
+  namedExports: { createToken: unexpectedDependency },
+});
+
+mock.module('./verification/verification.code.js', {
+  namedExports: { createVerificationCode: unexpectedDependency },
+});
+
+mock.module('./verification/verification.console.js', {
+  namedExports: { sendVerificationCode: unexpectedDependency },
+});
+
+mock.module('./password-reset/password-reset.code.js', {
+  namedExports: {
+    createPasswordResetCode: unexpectedDependency,
+    hashPasswordResetCode: unexpectedDependency,
+  },
+});
+
+mock.module('./password-reset/password-reset.console.js', {
+  namedExports: { sendPasswordResetCode: unexpectedDependency },
+});
+
+mock.module('argon2', {
+  defaultExport: {
+    hash: unexpectedDependency,
+    verify: unexpectedDependency,
+  },
+});
+
+const { getMe } = await import('./auth.services.js');
+
+beforeEach(() => {
+  findById.mock.resetCalls();
+  findById.mock.mockImplementation(async () => undefined);
+
+  toUserContract.mock.resetCalls();
+  toUserContract.mock.mockImplementation(() => {
+    throw new Error('Unexpected mapper invocation');
+  });
+
+  unexpectedDependency.mock.resetCalls();
+});
+
+afterEach(() => {
+  assert.equal(unexpectedDependency.mock.callCount(), 0);
+});
+
+function assertLookup(userId: number): void {
+  assert.equal(findById.mock.callCount(), 1);
+  assert.deepEqual(findById.mock.calls[0]!.arguments, [userId]);
+}
+
+function assertMapped(user: unknown): void {
+  assert.equal(toUserContract.mock.callCount(), 1);
+  assert.equal(toUserContract.mock.calls[0]!.arguments.length, 1);
+  assert.strictEqual(toUserContract.mock.calls[0]!.arguments[0], user);
+}
+
+test('getMe returns only a user wrapper containing the mapper result', async () => {
+  const storedUser = {
+    id: 42,
+    email: 'member@example.com',
+    username: 'member',
+    passwordHash: 'private-password-hash',
+    emailVerified: true,
+  };
+  const contract = {
+    id: 42,
+    email: 'member@example.com',
+    username: 'member',
+  };
+
+  findById.mock.mockImplementation(async () => storedUser);
+  toUserContract.mock.mockImplementation(() => contract);
+
+  const result = await getMe(42);
+
+  assert.deepEqual(result, { user: contract });
+  assert.strictEqual(result.user, contract);
+  assertLookup(42);
+  assertMapped(storedUser);
+});
+
+test('getMe throws the specified not-found AppError when no user exists', async () => {
+  const expected = new AppError(
+    HttpStatus.NOT_FOUND,
+    ErrorCode.USER_NOT_FOUND,
+    'User not found.',
+  );
+
+  await assert.rejects(getMe(404), (error: unknown) => {
+    assert.ok(error instanceof AppError);
+    assert.deepEqual(error, expected);
+    assert.equal(error.message, 'User not found.');
+    return true;
+  });
+
+  assertLookup(404);
+  assert.equal(toUserContract.mock.callCount(), 0);
+});
+
+test('getMe forwards a zero user ID without applying its own validation', async () => {
+  const storedUser = { id: 0 };
+  const contract = { id: 0 };
+
+  findById.mock.mockImplementation(async () => storedUser);
+  toUserContract.mock.mockImplementation(() => contract);
+
+  const result = await getMe(0);
+
+  assertLookup(0);
+  assertMapped(storedUser);
+  assert.strictEqual(result.user, contract);
+});
+
+test('getMe maps an unverified user rather than rejecting the account', async () => {
+  const storedUser = {
+    id: 17,
+    email: 'unverified@example.com',
+    emailVerified: false,
+  };
+  const contract = {
+    id: 17,
+    email: 'unverified@example.com',
+  };
+
+  findById.mock.mockImplementation(async () => storedUser);
+  toUserContract.mock.mockImplementation(() => contract);
+
+  const result = await getMe(17);
+
+  assert.deepEqual(result, { user: contract });
+  assertLookup(17);
+  assertMapped(storedUser);
+});
+
+test('getMe waits for the repository lookup before invoking the mapper', async () => {
+  const storedUser = { id: 23 };
+  const contract = { id: 23 };
+  let resolveLookup!: (value: unknown) => void;
+
+  const pendingLookup = new Promise<unknown>((resolve) => {
+    resolveLookup = resolve;
+  });
+
+  findById.mock.mockImplementation(() => pendingLookup);
+  toUserContract.mock.mockImplementation(() => contract);
+
+  const pendingResult = getMe(23);
+
+  assertLookup(23);
+  assert.equal(toUserContract.mock.callCount(), 0);
+
+  resolveLookup(storedUser);
+
+  const result = await pendingResult;
+
+  assert.strictEqual(result.user, contract);
+  assertMapped(storedUser);
+});
+
+test('getMe propagates repository rejection without invoking the mapper', async () => {
+  const repositoryError = new Error('Lookup failed');
+
+  findById.mock.mockImplementation(async () => {
+    throw repositoryError;
+  });
+
+  await assert.rejects(getMe(31), (error: unknown) => {
+    assert.strictEqual(error, repositoryError);
+    return true;
+  });
+
+  assertLookup(31);
+  assert.equal(toUserContract.mock.callCount(), 0);
+});
+
+test('getMe propagates a mapper exception without replacing it', async () => {
+  const storedUser = { id: 55 };
+  const mapperError = new Error('Mapping failed');
+
+  findById.mock.mockImplementation(async () => storedUser);
+  toUserContract.mock.mockImplementation(() => {
+    throw mapperError;
+  });
+
+  await assert.rejects(getMe(55), (error: unknown) => {
+    assert.strictEqual(error, mapperError);
+    return true;
+  });
+
+  assertLookup(55);
+  assertMapped(storedUser);
+});
+
+test('getMe performs a fresh lookup and mapping on repeated calls for the same ID', async () => {
+  const firstUser = { id: 71, username: 'before' };
+  const secondUser = { id: 71, username: 'after' };
+  const firstContract = { id: 71, username: 'before' };
+  const secondContract = { id: 71, username: 'after' };
+
+  findById.mock.mockImplementationOnce(async () => firstUser);
+  findById.mock.mockImplementationOnce(async () => secondUser);
+  toUserContract.mock.mockImplementationOnce(() => firstContract);
+  toUserContract.mock.mockImplementationOnce(() => secondContract);
+
+  const firstResult = await getMe(71);
+  const secondResult = await getMe(71);
+
+  assert.strictEqual(firstResult.user, firstContract);
+  assert.strictEqual(secondResult.user, secondContract);
+  assert.notStrictEqual(firstResult, secondResult);
+
+  assert.equal(findById.mock.callCount(), 2);
+  assert.deepEqual(
+    findById.mock.calls.map((call) => call.arguments),
+    [[71], [71]],
+  );
+
+  assert.equal(toUserContract.mock.callCount(), 2);
+  assert.strictEqual(toUserContract.mock.calls[0]!.arguments[0], firstUser);
+  assert.strictEqual(toUserContract.mock.calls[1]!.arguments[0], secondUser);
+});

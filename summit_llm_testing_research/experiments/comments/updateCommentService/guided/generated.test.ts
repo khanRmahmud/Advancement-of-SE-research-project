@@ -1,0 +1,251 @@
+import test, { mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { AppError } from '../errors/app.error.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+import type { DatabaseComment } from './comments.mapper.js';
+
+type CommentContract = ReturnType<
+  typeof import('./comments.mapper.js')['toCommentContract']
+>;
+
+const commentId = 41;
+const userId = 7;
+
+function makeComment(
+  overrides: Partial<DatabaseComment> = {},
+): DatabaseComment {
+  // Only fields relevant to authorization are needed with the mapper mocked.
+  return {
+    id: commentId,
+    authorId: userId,
+    deletedAt: null,
+    ...overrides,
+  } as DatabaseComment;
+}
+
+const existingComment = makeComment();
+const savedComment = makeComment({ body: 'Saved changes' });
+const mappedComment = {
+  id: commentId,
+  body: 'Saved changes',
+} as CommentContract;
+
+const getCommentById = mock.fn(
+  async (_id: number): Promise<DatabaseComment | null> => existingComment,
+);
+const updateCommentById = mock.fn(
+  async (_id: number, _body: string): Promise<DatabaseComment> => savedComment,
+);
+const toCommentContract = mock.fn(
+  (_comment: DatabaseComment): CommentContract => mappedComment,
+);
+
+function unexpectedRepositoryCall(): never {
+  throw new Error('Unexpected repository call');
+}
+
+const unusedRepositories = {
+  createComment: mock.fn(unexpectedRepositoryCall),
+  getByIdPost: mock.fn(unexpectedRepositoryCall),
+  getCommentsByPostId: mock.fn(unexpectedRepositoryCall),
+  getCommentVote: mock.fn(unexpectedRepositoryCall),
+  removeCommentById: mock.fn(unexpectedRepositoryCall),
+  setCommentVote: mock.fn(unexpectedRepositoryCall),
+};
+
+// Run with --experimental-test-module-mocks.
+mock.module('./comments.repositories.js', {
+  namedExports: {
+    ...unusedRepositories,
+    getCommentById,
+    updateCommentById,
+  },
+});
+mock.module('./comments.mapper.js', {
+  namedExports: { toCommentContract },
+});
+
+const { updateCommentService } = await import('./comments.services.js');
+
+function resetDependencies(): void {
+  getCommentById.mock.resetCalls();
+  getCommentById.mock.mockImplementation(async () => existingComment);
+
+  updateCommentById.mock.resetCalls();
+  updateCommentById.mock.mockImplementation(async () => savedComment);
+
+  toCommentContract.mock.resetCalls();
+  toCommentContract.mock.mockImplementation(() => mappedComment);
+
+  for (const dependency of Object.values(unusedRepositories)) {
+    dependency.mock.resetCalls();
+  }
+}
+
+function assertCalls(
+  expectedUpdateArguments: unknown[][],
+  expectedMapperArguments: unknown[][],
+): void {
+  assert.deepEqual(
+    getCommentById.mock.calls.map((call) => call.arguments),
+    [[commentId]],
+  );
+  assert.deepEqual(
+    updateCommentById.mock.calls.map((call) => call.arguments),
+    expectedUpdateArguments,
+  );
+  assert.deepEqual(
+    toCommentContract.mock.calls.map((call) => call.arguments),
+    expectedMapperArguments,
+  );
+  for (const dependency of Object.values(unusedRepositories)) {
+    assert.equal(dependency.mock.callCount(), 0);
+  }
+}
+
+function matchesAppError(expected: AppError): (error: unknown) => boolean {
+  return (error) => {
+    assert.ok(error instanceof AppError);
+    assert.deepEqual(error, expected);
+    return true;
+  };
+}
+
+test('updateCommentService saves an owned comment and maps the persisted record', { concurrency: false }, async () => {
+  resetDependencies();
+
+  const result = await updateCommentService(commentId, userId, {
+    body: 'Saved changes',
+  });
+
+  assert.deepEqual(result, { comment: mappedComment });
+  assert.strictEqual(result.comment, mappedComment);
+  assertCalls([[commentId, 'Saved changes']], [[savedComment]]);
+  assert.notStrictEqual(savedComment, existingComment);
+});
+
+test('updateCommentService forwards an empty body unchanged', { concurrency: false }, async () => {
+  resetDependencies();
+  const emptySavedComment = makeComment({ body: '' });
+  const emptyMappedComment = { id: commentId, body: '' } as CommentContract;
+  updateCommentById.mock.mockImplementation(async () => emptySavedComment);
+  toCommentContract.mock.mockImplementation(() => emptyMappedComment);
+
+  const result = await updateCommentService(commentId, userId, { body: '' });
+
+  assert.deepEqual(result, { comment: emptyMappedComment });
+  assertCalls([[commentId, '']], [[emptySavedComment]]);
+});
+
+test('updateCommentService rejects a missing comment without updating it', { concurrency: false }, async () => {
+  resetDependencies();
+  getCommentById.mock.mockImplementation(async () => null);
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Changes' }),
+    matchesAppError(
+      new AppError(
+        HttpStatus.NOT_FOUND,
+        ErrorCode.COMMENT_NOT_FOUND,
+        'Comment not found.',
+      ),
+    ),
+  );
+
+  assertCalls([], []);
+});
+
+test('updateCommentService forbids another user from editing a comment', { concurrency: false }, async () => {
+  resetDependencies();
+  getCommentById.mock.mockImplementation(async () =>
+    makeComment({ authorId: userId + 1 }),
+  );
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Unauthorized changes' }),
+    matchesAppError(
+      new AppError(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.FORBIDDEN,
+        "You cannot modify another user's comment.",
+      ),
+    ),
+  );
+
+  assertCalls([], []);
+});
+
+test('updateCommentService rejects an owned comment that has been deleted', { concurrency: false }, async () => {
+  resetDependencies();
+  getCommentById.mock.mockImplementation(async () =>
+    makeComment({ deletedAt: new Date('2025-01-01T00:00:00.000Z') }),
+  );
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Changes' }),
+    matchesAppError(
+      new AppError(
+        HttpStatus.CONFLICT,
+        ErrorCode.COMMENT_DELETED,
+        'This comment has already been deleted.',
+      ),
+    ),
+  );
+
+  assertCalls([], []);
+});
+
+test('updateCommentService propagates lookup failures without attempting an update', { concurrency: false }, async () => {
+  resetDependencies();
+  const failure = new Error('Comment lookup failed');
+  getCommentById.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Changes' }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertCalls([], []);
+});
+
+test('updateCommentService propagates update failures without mapping a result', { concurrency: false }, async () => {
+  resetDependencies();
+  const failure = new Error('Comment update failed');
+  updateCommentById.mock.mockImplementation(async () => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Changes' }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertCalls([[commentId, 'Changes']], []);
+});
+
+test('updateCommentService propagates mapping failures after the update succeeds', { concurrency: false }, async () => {
+  resetDependencies();
+  const failure = new Error('Comment mapping failed');
+  toCommentContract.mock.mockImplementation(() => {
+    throw failure;
+  });
+
+  await assert.rejects(
+    updateCommentService(commentId, userId, { body: 'Changes' }),
+    (error: unknown) => {
+      assert.strictEqual(error, failure);
+      return true;
+    },
+  );
+
+  assertCalls([[commentId, 'Changes']], [[savedComment]]);
+});

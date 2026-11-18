@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "study": "Summit specification-guided vs code-only unit test generation",
+  "feature": "posts",
+  "target_function": "updatePostService",
+  "source_file": "src/posts/posts.service.ts",
+  "specification_provenance": "Original user stories and Product Backlog; specific deployment clarification from project team",
+  "requirements": [
+    {
+      "id": "POST-EDIT-01",
+      "text": "A post owner can edit and save changes to their post.",
+      "evidence": "Sprint 1 user story: edit option for post owner; save edited posts; Product Backlog: edit own posts."
+    },
+    {
+      "id": "POST-EDIT-02",
+      "text": "A user must not be permitted to edit a post owned by another user.",
+      "evidence": "Sprint 1 user story: restrict editing and deletion to post owner."
+    }
+  ],
+  "evaluation_notes": []
+}
